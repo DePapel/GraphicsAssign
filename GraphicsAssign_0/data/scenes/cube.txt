@@ -1,0 +1,16 @@
+
+#camera data
+fovy 60.0
+width 1280.0
+height 720.0
+near 1
+far 500
+camPosition 0 0 110
+camTarget 0 0 50
+camUp 0 1 0
+    
+object cube
+translate 0 0 50
+rotation 0 0 0
+scale 10 10 10
+mesh CUBE

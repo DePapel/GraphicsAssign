@@ -2,14 +2,13 @@
 
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
-
 #include <glm/gtc/matrix_transform.hpp>
-
 
 //#define TINYOBJLOADER_IMPLEMENTATION
 #include "../extern/tiny_obj_loader.h"
 
 #include "Level.h"
+#include <iostream>
 
 int Model::slices = 5;
 
@@ -91,6 +90,17 @@ glm::mat4x4 Model::ComputeMatrix()
 
 void Model::LoadModel()
 {
+	points.clear();
+	normals.clear();
+	comNormal.clear();
+	avgNormal.clear();
+	drawNormal.clear();
+	avgCnt.clear();
+
+	pointIndeces.clear();
+	normalIndeces.clear();
+	UV.clear();
+	vertices.clear();
 	//If exception. use one of our functions
 	if (transf.mesh == "PLANE")
 		CreateModelPlane();
@@ -153,57 +163,8 @@ void Model::LoadModel()
 
 Model::Model(const CS300Parser::Transform& _transform) : transf(_transform), VBO(0), VAO(0)
 {
-	//load points
-	LoadModel();
-	
-	int s = points.size();
-	//vertices
-	for (int i = 0; i < s; i++)
-	{
-		//points
-		vertices.push_back(points[i].x);
-		vertices.push_back(points[i].y);
-		vertices.push_back(points[i].z);
-		//normals
-		vertices.push_back(comNormal[i].x);
-		vertices.push_back(comNormal[i].y);
-		vertices.push_back(comNormal[i].z);
-		//UV
-		vertices.push_back(UV[i].x);
-		vertices.push_back(UV[i].y);
-	}
-
-	//Sanity Check
-	if (vertices.size() == 0)
-		return;
-
-	//Gen VAO
-	glGenVertexArrays(1, &VAO);
-	glBindVertexArray(VAO);
-
-	//Gen VBO
-	glGenBuffers(1, &VBO);
-	glBindBuffer(GL_ARRAY_BUFFER, VBO);
-	glBufferData(GL_ARRAY_BUFFER, vertices.size() * (sizeof(float)), &vertices[0], GL_STATIC_DRAW);
-
-	//Assign Coordinates
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
-	glEnableVertexAttribArray(0);
-
-	//Assign Normals
-	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3*sizeof(float)));
-	glEnableVertexAttribArray(1);
-
-	//Assign UV
-	glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6*sizeof(float)));
-	glEnableVertexAttribArray(2);
-
-	CreateTextureData();
-
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
-	glBindVertexArray(0);
+	CreateModels();
 }
-
 Model::~Model()
 {
 	glDeleteBuffers(1, &VBO);
@@ -212,12 +173,8 @@ Model::~Model()
 	glDeleteVertexArrays(1, &norVAO);
 }
 
-//TODO:
 void Model::CreateModelPlane()
 {
-	points.clear();
-	UV.clear();
-	normals.clear();
 
 	//TODO: Points
 	points =
@@ -254,15 +211,13 @@ void Model::CreateModelPlane()
 		{0.0f, 0.0f, 1.0f}
 	};
 
-	
+	for (int i = 0; i < comNormal.size(); i++)
+		drawNormal.push_back(comNormal[i]);
 }
 
 void Model::CreateModelCube()
 {
-	points.clear();
-	UV.clear();
-	normals.clear();
-
+	
 	//Points coordinates
 	std::vector<glm::vec3> shapePoint =
 	{
@@ -278,22 +233,28 @@ void Model::CreateModelCube()
 
 	pointIndeces =
 	{
+		//Front CCW
 		0, 1, 2,
 		0, 2, 3,
-		1, 5, 6,
-		1, 6, 2,
+		//Back CCW
 		5, 4, 7,
 		5, 7, 6,
-		4, 0, 3,
-		4, 3, 7,
-		3, 2, 6,
-		3, 6, 7,
+		//Right CCW
+		1, 5, 2,
+		6, 2, 5,
+		//Left CCW
+		4, 0, 7,
+		3, 7, 0,
+		//Top CCW
+		2, 6, 7,
+		2, 7, 3,
+		//Btm CCW
 		0, 4, 5,
 		0, 5, 1
 	};
 
 	//UV coordinates
-	const std::vector<glm::vec2> basisUV =
+	const std::vector<glm::vec2> basisUV_FB =
 	{
 		{0.0f, 0.0f},  // Bottom-left
 		{1.0f, 0.0f},  // Bottom-right
@@ -302,30 +263,43 @@ void Model::CreateModelCube()
 		{1.0f, 1.0f},  // Top-right
 		{0.0f, 1.0f},   // Top-left
 	};
-	for (int i = 0; i < basisUV.size(); i++)
+	
+	const std::vector<glm::vec2> basisUV_RL =
 	{
-		UV.insert(UV.end(), basisUV.begin(), basisUV.end());
-		//UV.push_back(basisUV[i]);
+		{0.0f, 0.0f},  // Bottom-left
+		{1.0f, 0.0f},  // Bottom-right
+		{0.0f, 1.0f},   // Top-left
+		{1.0f, 1.0f},  // Top-right
+		{0.0f, 1.0f},   // Top-left
+		{1.0f, 0.0f},  // Bottom-right
+	};
+
+	for (int i = 0; i < basisUV_FB.size(); i++)
+	{
+		if (i == 2 || i == 3) //Right, Left 일 경우에만 반대로
+			UV.insert(UV.end(), basisUV_RL.begin(), basisUV_RL.end());
+		else
+			UV.insert(UV.end(), basisUV_FB.begin(), basisUV_FB.end());
+
 	}
 
 	//Use to calculate Normal vector's average=====================
-	//std::vector<glm::vec3> avgNormal(shapePoint.size(), { 0,0,0 });
-	//std::vector<int> avgCnt(shapePoint.size(), 0); //count
 	avgNormal.resize(shapePoint.size());
 	avgCnt.resize(shapePoint.size());
 	//=============================================================
 	//Common Normal vector
-
 	glm::vec3 a, b, nor;
 	for (int i = 0; i < pointIndeces.size(); i+=3)
 	{
 		points.push_back(shapePoint[pointIndeces[i]]);
 		points.push_back(shapePoint[pointIndeces[i + 1]]);
 		points.push_back(shapePoint[pointIndeces[i + 2]]);
+		
+		//CrossProduct Error!!!
 		a = shapePoint[pointIndeces[i]] - shapePoint[pointIndeces[i + 1]];
-		b = shapePoint[pointIndeces[i + 1]] - shapePoint[pointIndeces[i + 2]];
+		b = shapePoint[pointIndeces[i]] - shapePoint[pointIndeces[i + 2]];
 		nor = glm::cross(a, b);
-		glm::normalize(nor);
+		nor = glm::normalize(nor);
 		//regular normals
 		comNormal.push_back(nor);
 		comNormal.push_back(nor);
@@ -341,13 +315,7 @@ void Model::CreateModelCube()
 		avgCnt[pointIndeces[i + 2]] += 1;
 	}
 
-	//Normals coordinates
-	for (int i = 0; i < avgNormal.size(); i++)
-	{
-		avgNormal[i] /= avgCnt[i];
-		glm::normalize(avgNormal[i]);
-	}
-
+	
 
 	CalculateNormals();
 
@@ -355,12 +323,11 @@ void Model::CreateModelCube()
 
 void Model::CreateModelCone(int slices)
 {
-	points.clear();
-
 	float angle = 360.f / slices;
 	angle = glm::radians(angle);
 	glm::vec3 topPoint = { 0.0f, 0.5f, 0.0f };
 	glm::vec3 btmPoint = { 0.0f, -0.5f, 0.0f };
+	glm::vec3 pointA, pointB, vecA, vecB, nor;
 	//TODO: Points
 	//TODO: UVs
 	//TODO: Normals
@@ -370,33 +337,45 @@ void Model::CreateModelCone(int slices)
 	{
 		points.push_back(topPoint);
 		UV.push_back({ (i + 0.5f) / (float)slices, 1.0f });
-		comNormal.push_back({ 0.0f, 1.0f, 0.0f });
 
-		points.push_back({ 0.5 * cos(i * angle), -0.5, 0.5 * sin(i * angle) });
+		pointA = { 0.5 * cos(i * angle), -0.5, 0.5 * sin(i * angle) };
+		points.push_back(pointA);
 		UV.push_back({ i / (float)slices, 0.0f });
-		comNormal.push_back({ 0.0f, -1.0f, 0.0f });
 
-		points.push_back({ 0.5 * cos((i + 1) * angle), -0.5, 0.5 * sin((i + 1) * angle) });
+		pointB = { 0.5 * cos((i + 1) * angle), -0.5, 0.5 * sin((i + 1) * angle) };
+		points.push_back(pointB);
 		UV.push_back({ (i + 1) / (float)slices, 0.0f });
-		comNormal.push_back({ 0.0f, -1.0f, 0.0f });
+
+		vecA = pointA - topPoint;
+		vecB = topPoint - pointB;
+		nor = glm::cross(vecA, vecB);
+		comNormal.push_back(nor);
+		comNormal.push_back(nor);
+		comNormal.push_back(nor);
 	}
 	//Btm
 	for (int i = 0; i < slices; i++)
 	{
 		points.push_back(btmPoint);
 		UV.push_back({ (i + 0.5f) / (float)slices,0.0f });
-		comNormal.push_back({ 0.0f, 1.0f, 0.0f });
 
-		points.push_back({ 0.5 * cos(i * angle), -0.5, 0.5 * sin(i * angle) });
+		pointA = { 0.5 * cos(i * angle), -0.5, 0.5 * sin(i * angle) };
+		points.push_back(pointA);
 		UV.push_back({ i / (float)slices, 0.0f });
-		comNormal.push_back({ 0.0f, -1.0f, 0.0f });
 
-		points.push_back({ 0.5 * cos((i + 1) * angle), -0.5, 0.5 * sin((i + 1) * angle) });
+		pointB = { 0.5 * cos((i + 1) * angle), -0.5, 0.5 * sin((i + 1) * angle) };
+		points.push_back(pointB);
 		UV.push_back({ (i + 1) / (float)slices, 0.0f });
-		comNormal.push_back({ 0.0f, -1.0f, 0.0f });
+
+		vecA = btmPoint - pointA;
+		vecB = pointA - pointB;
+		nor = glm::cross(vecA, vecB);
+		comNormal.push_back(nor);
+		comNormal.push_back(nor);
+		comNormal.push_back(nor);
 	}
 
-
+	CalculateNormals();
 }
 
 void Model::CreateModelCylinder(int slices)
@@ -417,65 +396,74 @@ void Model::CreateModelSphere(int slices)
 	//TODO: Normals
 }
 
-void Model::CreateBuffers()
+void Model::CreateModels()
 {
-
-	// VAO와 VBO 삭제
 	glDeleteBuffers(1, &VBO);
 	glDeleteVertexArrays(1, &VAO);
-	// 버텍스 데이터 초기화
-	points.clear();
-	normals.clear();
-	UV.clear();
-	vertices.clear();
-	// 모델 다시 로드
+
+	//load points
 	LoadModel();
-	// 새로운 VAO와 VBO 생성
+
 	int s = points.size();
-	// vertices 데이터 생성
-	for (int i = 0; i < s; i++) {
+	//vertices
+	for (int i = 0; i < s; i++)
+	{
+		//points
 		vertices.push_back(points[i].x);
 		vertices.push_back(points[i].y);
 		vertices.push_back(points[i].z);
-		vertices.push_back(normals[i].x);
-		vertices.push_back(normals[i].y);
-		vertices.push_back(normals[i].z);
+		//normals
+		vertices.push_back(comNormal[i].x);
+		vertices.push_back(comNormal[i].y);
+		vertices.push_back(comNormal[i].z);
+		//UV
 		vertices.push_back(UV[i].x);
 		vertices.push_back(UV[i].y);
 	}
 
-	if (vertices.size() == 0) return;
+	//Sanity Check
+	if (vertices.size() == 0)
+		return;
 
-	// VBO 생성 및 데이터 전송
-	glGenBuffers(1, &VBO);
-	glBindBuffer(GL_ARRAY_BUFFER, VBO);
-	glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(float), &vertices[0], GL_STATIC_DRAW);
-
-	// VAO 생성 및 설정
+	//Gen VAO
 	glGenVertexArrays(1, &VAO);
 	glBindVertexArray(VAO);
 
-	// 위치 데이터
+	//Gen VBO
+	glGenBuffers(1, &VBO);
+	glBindBuffer(GL_ARRAY_BUFFER, VBO);
+	glBufferData(GL_ARRAY_BUFFER, vertices.size() * (sizeof(float)), &vertices[0], GL_STATIC_DRAW);
+
+	//Assign Coordinates
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
 	glEnableVertexAttribArray(0);
 
-	// 법선 데이터
+	//Assign Normals
 	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
 	glEnableVertexAttribArray(1);
 
-	// UV 데이터
+	//Assign UV
 	glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
 	glEnableVertexAttribArray(2);
 
-	glBindVertexArray(0);
+	CreateTextureData();
+
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
+	glBindVertexArray(0);
 }
 
 void Model::CalculateNormals()
 {
+	//Normals coordinates
+	for (int i = 0; i < avgNormal.size(); i++)
+	{
+		avgNormal[i] /= avgCnt[i];
+		avgNormal[i] = glm::normalize(avgNormal[i]);
+	}
+
 	normals.clear();
 	drawNormal.clear();
-	if (Level::GetPtr()->normalVecSw)
+	if (!Level::GetPtr()->comavgSw)
 	{
 		for (int i = 0; i < comNormal.size(); i++)
 		{
@@ -497,12 +485,6 @@ void Model::CalculateNormals()
 	if (normals.empty())
 		return;
 
-
-
-
-	//vector<glm::vec3> normal_lines;
-	//normals - points
-
 	// VAO와 VBO 삭제
 	glDeleteBuffers(1, &norVBO);
 	glDeleteVertexArrays(1, &norVAO);
@@ -515,11 +497,4 @@ void Model::CalculateNormals()
 	glBufferData(GL_ARRAY_BUFFER, drawNormal.size() * (sizeof(float) * 3), &drawNormal[0], GL_STATIC_DRAW);
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
 	glEnableVertexAttribArray(0);
-	
-	//애초부터 잘 안그려짐
-	//F키를 누르면 사라짐 --> 아마도 계산하고 다시 안그리기 때문에 그런것으로 보임.
-	
-	
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
-	glBindVertexArray(0);
 }

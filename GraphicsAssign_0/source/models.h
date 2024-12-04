@@ -22,26 +22,26 @@ struct Model
 	std::vector<glm::vec3> avgNormal;
 	std::vector<int> avgCnt; //count
 
-	std::vector<glm::vec3> drawNormal;
-
+	//My Extra Code=========================
 	unsigned int VBO;
 	unsigned int VAO;
 	unsigned int textureID;
 
 	unsigned int norVBO;
 	unsigned int norVAO;
-	float rejustSize = 0.3f;
-
+	std::vector<glm::vec3> drawNormal;
+	float rejustSize = 0.5f;
+	
 	void CreateTextureData();
-
+	static int slices;
+	void CreateModels();
+	void CalculateNormals();
+	//======================================
 	void LoadModel();
 
 	Model(const CS300Parser::Transform& _transform);
 	~Model();
 	
-	static int slices;
-	void CreateBuffers();
-	void CalculateNormals();
 private:
 	//TODO
 	void CreateModelPlane();

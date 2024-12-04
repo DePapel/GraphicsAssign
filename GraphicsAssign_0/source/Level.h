@@ -27,7 +27,9 @@ struct Level
 	void RotateCamY(float angle);
 
 	bool keyStateW = false, keyStateS = false, keyStateA = false, keyStateD = false;
-	bool normalVecSw, shaderSW;
+	bool comavgSw, shaderSW, norOnOffSW = false, wireSW = false;
+
+	glm::vec4 drawColor = { 1.0f, 1.0f, 1.0f, 1.0f };
 private:
 	void Render(Model*);
 	Level();

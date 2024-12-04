@@ -5,6 +5,9 @@ in vec2 UV;
 uniform sampler2D myTextureSampler;
 uniform bool shaderSW;
 
+uniform bool lineSW;
+uniform vec4 lineColor;
+
 //uniform int   uLightNum;
 //uniform Light uLight[LIGHT_NUM_MAX];
 
@@ -14,4 +17,7 @@ void main()
 		FragColor = texture(myTextureSampler, UV);
 	else
 		FragColor = vec4(UV, 0.0, 1.0);
+
+	if(lineSW)
+		FragColor = lineColor;
 }

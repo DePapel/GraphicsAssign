@@ -242,6 +242,7 @@ void Level::Render(Model* obj)
 	glBindTexture(GL_TEXTURE_2D, obj->textureID);
 	shader->setUniform("myTextureSampler", 0);
 	shader->setUniform("shaderSW", shaderSW);
+	
 	//=====================================================
 
 
@@ -261,12 +262,21 @@ void Level::Render(Model* obj)
 	//}
 
 	//draw
+	if (wireSW)
+		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+	else
+		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+		
+	shader->setUniform("lineSW", false);
 	glDrawArrays(GL_TRIANGLES, 0, obj->points.size());
 
-
+	shader->setUniform("lineSW", true);
+	shader->setUniform("lineColor", drawColor);
 	glBindBuffer(GL_ARRAY_BUFFER, obj->norVBO);
 	glBindVertexArray(obj->norVAO);
-	glDrawArrays(GL_LINES, 0, obj->drawNormal.size());
+
+	if (norOnOffSW)
+		glDrawArrays(GL_LINES, 0, obj->drawNormal.size());
 
 
 	glBindBuffer(GL_ARRAY_BUFFER,0);

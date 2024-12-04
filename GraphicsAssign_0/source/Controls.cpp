@@ -6,7 +6,8 @@
 
 void Controls::RejustSlice(const float& cf_in)
 {
-    if (auto temp = Level::GetPtr()->getAllObject().begin()[0]) {
+    if (auto temp = Level::GetPtr()->getAllObject().begin()[0]) 
+    {
         auto SliceTemp = temp->slices;
         SliceTemp += cf_in;
         if (SliceTemp > 3)
@@ -14,8 +15,10 @@ void Controls::RejustSlice(const float& cf_in)
             temp->slices = SliceTemp;
         }
     }
-    for (auto obj : Level::GetPtr()->getAllObject()) {
-        obj->CreateBuffers();
+    for (auto obj : Level::GetPtr()->getAllObject()) 
+    {
+        if (obj->transf.mesh == "CONE" || obj->transf.mesh == "CYLINDER" || obj->transf.mesh == "SPHERE")
+            obj->CreateModels();
     }
 }
 
@@ -47,7 +50,12 @@ void Controls::keyCallback(GLFWwindow* pWindow, int key, int scancode, int actio
             Level::GetPtr()->Joom(1.f);
         if (key == GLFW_KEY_Q)
             Level::GetPtr()->Joom(-1.f);
-        
+
+        //TODO: ADD/DECRESE SLICES
+        if (key == GLFW_KEY_Z)
+            RejustSlice(1);
+        if (key == GLFW_KEY_X)
+            RejustSlice(-1);
     }
     else
     {
@@ -56,30 +64,25 @@ void Controls::keyCallback(GLFWwindow* pWindow, int key, int scancode, int actio
         Level::GetPtr()->keyStateA = false;
         Level::GetPtr()->keyStateD = false;
     }
-
-    //TODO: ADD/DECRESE SLICES
-    if (action == GLFW_PRESS || action == GLFW_REPEAT)
-    {
-        if (key == GLFW_KEY_Z)
-            RejustSlice(1);
-        if (key == GLFW_KEY_X)
-            RejustSlice(-1);
-    }
-    //TODO: TRIGGER WIREFRAME
-    if(key == GLFW_KEY_M) 
-    {
-        //Draw속성을 Triangles 대신 line으로 고치면 되지않을까???
-    }
+    
     if (action == GLFW_PRESS)
     {
+        //TODO: TRIGGER WIREFRAME
+        if (key == GLFW_KEY_M)
+            Level::GetPtr()->wireSW = !Level::GetPtr()->wireSW;
+
         //TODO: TRIGGER TEXTURE
         if (key == GLFW_KEY_T)
             Level::GetPtr()->shaderSW = !Level::GetPtr()->shaderSW;
+
         //TODO: TRIGGER NORMALS RENDER
+        if (key == GLFW_KEY_N)
+            Level::GetPtr()->norOnOffSW = !Level::GetPtr()->norOnOffSW;
+
         //TODO: TRIGGER NORMALS AVERAGE
         if (key == GLFW_KEY_F)
         {
-            Level::GetPtr()->normalVecSw = !Level::GetPtr()->normalVecSw;
+            Level::GetPtr()->comavgSw = !Level::GetPtr()->comavgSw;
             for (auto obj : Level::GetPtr()->getAllObject()) 
             {
                 //모든 obj의 Normals을 다시 계산하니 First Row에 있는 도형들도 계산이 되는거 같음.
@@ -87,6 +90,7 @@ void Controls::keyCallback(GLFWwindow* pWindow, int key, int scancode, int actio
                 obj->CalculateNormals();
             }
         }
+        
     }
 
 }
