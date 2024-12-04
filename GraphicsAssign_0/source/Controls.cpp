@@ -80,7 +80,10 @@ void Controls::keyCallback(GLFWwindow* pWindow, int key, int scancode, int actio
         if (key == GLFW_KEY_F)
         {
             Level::GetPtr()->normalVecSw = !Level::GetPtr()->normalVecSw;
-            for (auto obj : Level::GetPtr()->getAllObject()) {
+            for (auto obj : Level::GetPtr()->getAllObject()) 
+            {
+                //모든 obj의 Normals을 다시 계산하니 First Row에 있는 도형들도 계산이 되는거 같음.
+                //Second Row에 있는(Create함수를 사용하여 만드는 도형들만 즉, obj파일을 로드한 것이 아닌 애들만 계산이 되게)
                 obj->CalculateNormals();
             }
         }

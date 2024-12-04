@@ -22,7 +22,7 @@ struct Model
 	std::vector<glm::vec3> avgNormal;
 	std::vector<int> avgCnt; //count
 
-
+	std::vector<glm::vec3> drawNormal;
 
 	unsigned int VBO;
 	unsigned int VAO;
@@ -30,6 +30,7 @@ struct Model
 
 	unsigned int norVBO;
 	unsigned int norVAO;
+	float rejustSize = 0.3f;
 
 	void CreateTextureData();
 

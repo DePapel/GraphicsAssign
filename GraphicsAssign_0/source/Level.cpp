@@ -266,7 +266,7 @@ void Level::Render(Model* obj)
 
 	glBindBuffer(GL_ARRAY_BUFFER, obj->norVBO);
 	glBindVertexArray(obj->norVAO);
-	glDrawArrays(GL_LINES, 0, obj->normals.size());
+	glDrawArrays(GL_LINES, 0, obj->drawNormal.size());
 
 
 	glBindBuffer(GL_ARRAY_BUFFER,0);
