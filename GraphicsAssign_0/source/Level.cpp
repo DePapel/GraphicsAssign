@@ -45,13 +45,21 @@ int Level::Initialize()
 
 	//Load Scene
 	CS300Parser parser;
-	parser.LoadDataFromFile("data/scenes/scene_A1.txt");
+	parser.LoadDataFromFile("data/scenes/test.txt");
 
 	//Convert from parser->obj to Model
 	for (auto o : parser.objects)
 	{
 		allObjects.push_back(new Model(o));
 	}
+
+	for (auto o : parser.lights)
+	{
+		allObjects.push_back(new Model(o));
+	}
+	//First Make a Light Model
+	//parser light -> real light obj
+	//Second light shader
 
 	//Save camera
 	cam.fovy = parser.fovy;
@@ -203,20 +211,17 @@ void Level::KeyInput()
 }
 void Level::Joom(float val)
 {
-	cam.camPos += glm::vec3(0, 0, val);
+	val *= 0.01f;
+	cam.camPos += val * (cam.camTarget - cam.camPos);
 }
 
 void Level::RotateCamX(float angle)
 {
-	// 현재 pitch 각도 계산
-	float currentPitch = glm::degrees(glm::asin(cam.camForward.y));
-	float newPitch = currentPitch + angle;
+	glm::vec3 right = glm::cross(cam.camUp, cam.camPos - cam.camTarget);
+	glm::vec3 rotVec = glm::vec3(glm::rotate(glm::identity<glm::mat4>(), glm::radians(-angle), right) * glm::vec4(cam.camTarget - cam.camPos, 1));
 
-	// 각도 제한 (-89도 ~ 89도)
-	if (newPitch > 89.9f) angle = 89.9f - currentPitch;
-	if (newPitch < -89.9f) angle = -89.9f - currentPitch;
-
-	cam.camPos = cam.camTarget - glm::vec3(glm::rotate(glm::identity<glm::mat4>(), glm::radians(-angle), cam.camRight) * glm::vec4(cam.camTarget - cam.camPos, 1));
+	if (abs(rotVec.z) > 0.1f)
+		cam.camPos = cam.camTarget - rotVec;
 }
 
 void Level::RotateCamY(float angle)
@@ -232,6 +237,7 @@ void Level::Render(Model* obj)
 	glBindVertexArray(obj->VAO);
 
 	//Send model matrix to the shader
+
 	glm::mat4x4 m2w = obj->ComputeMatrix();
 
 	//Send view matrix to the shader
@@ -244,7 +250,6 @@ void Level::Render(Model* obj)
 	shader->setUniform("shaderSW", shaderSW);
 	
 	//=====================================================
-
 
 	//shader->setUniform("uLightNum", int(lights.size()));
 	//for (size_t i = 0; i < lights.size(); i++)

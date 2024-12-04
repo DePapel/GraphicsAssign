@@ -161,9 +161,118 @@ void Model::LoadModel()
 	}
 }
 
+void Model::CreateModels()
+{
+	glDeleteBuffers(1, &VBO);
+	glDeleteVertexArrays(1, &VAO);
+
+	//load points
+	LoadModel();
+
+	int s = points.size();
+	//vertices
+	for (int i = 0; i < s; i++)
+	{
+		//points
+		vertices.push_back(points[i].x);
+		vertices.push_back(points[i].y);
+		vertices.push_back(points[i].z);
+		//normals
+		vertices.push_back(comNormal[i].x);
+		vertices.push_back(comNormal[i].y);
+		vertices.push_back(comNormal[i].z);
+		//UV
+		vertices.push_back(UV[i].x);
+		vertices.push_back(UV[i].y);
+	}
+
+	//Sanity Check
+	if (vertices.size() == 0)
+		return;
+
+	//Gen VAO
+	glGenVertexArrays(1, &VAO);
+	glBindVertexArray(VAO);
+
+	//Gen VBO
+	glGenBuffers(1, &VBO);
+	glBindBuffer(GL_ARRAY_BUFFER, VBO);
+	glBufferData(GL_ARRAY_BUFFER, vertices.size() * (sizeof(float)), &vertices[0], GL_STATIC_DRAW);
+
+	//Assign Coordinates
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
+	glEnableVertexAttribArray(0);
+
+	//Assign Normals
+	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
+	glEnableVertexAttribArray(1);
+
+	//Assign UV
+	glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
+	glEnableVertexAttribArray(2);
+
+	CreateTextureData();
+
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+	glBindVertexArray(0);
+}
+
 Model::Model(const CS300Parser::Transform& _transform) : transf(_transform), VBO(0), VAO(0)
 {
 	CreateModels();
+}
+
+Model::Model(const CS300Parser::Light& _light)
+{
+	glDeleteBuffers(1, &VBO);
+	glDeleteVertexArrays(1, &VAO);
+
+	//All LightModel must be Sphere!! BUT now I can use 'Cube' Model
+	CreateModelCube();
+
+	//Change to Lights
+	int s = points.size();
+	//vertices
+ 	for (int i = 0; i < s; i++)
+	{
+		//points
+		vertices.push_back(points[i].x);
+		vertices.push_back(points[i].y);
+		vertices.push_back(points[i].z);
+		//normals
+		vertices.push_back(comNormal[i].x);
+		vertices.push_back(comNormal[i].y);
+		vertices.push_back(comNormal[i].z);
+		//UV
+		vertices.push_back(UV[i].x);
+		vertices.push_back(UV[i].y);
+	}
+
+	//Gen VAO
+	glGenVertexArrays(1, &VAO);
+	glBindVertexArray(VAO);
+
+	//Gen VBO
+	glGenBuffers(1, &VBO);
+	glBindBuffer(GL_ARRAY_BUFFER, VBO);
+	glBufferData(GL_ARRAY_BUFFER, vertices.size() * (sizeof(float)), &vertices[0], GL_STATIC_DRAW);
+
+	//Assign Coordinates
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
+	glEnableVertexAttribArray(0);
+
+	//Assign Normals
+	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
+	glEnableVertexAttribArray(1);
+
+	//Assign UV
+	glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
+	glEnableVertexAttribArray(2);
+
+	CreateTextureData();
+
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+	glBindVertexArray(0);
 }
 Model::~Model()
 {
@@ -175,8 +284,7 @@ Model::~Model()
 
 void Model::CreateModelPlane()
 {
-
-	//TODO: Points
+	//Points coorinates
 	points =
 	{
 	   {-0.5f, -0.5f, 0.0f},  // Bottom-left
@@ -187,7 +295,6 @@ void Model::CreateModelPlane()
 	   {-0.5f, -0.5f, 0.0f}  // Bottom-left
 	};
 
-	//TODO: UVs
 	// UV coordinates
 	UV =
 	{
@@ -199,7 +306,6 @@ void Model::CreateModelPlane()
 		{0.0f, 0.0f},  // Bottom-left
 	};
 
-	//TODO: Normals
 	// Normals (pointing up for all vertices)
 	comNormal =
 	{
@@ -217,7 +323,6 @@ void Model::CreateModelPlane()
 
 void Model::CreateModelCube()
 {
-	
 	//Points coordinates
 	std::vector<glm::vec3> shapePoint =
 	{
@@ -233,22 +338,22 @@ void Model::CreateModelCube()
 
 	pointIndeces =
 	{
-		//Front CCW
+		//Front
 		0, 1, 2,
 		0, 2, 3,
-		//Back CCW
+		//Back
 		5, 4, 7,
 		5, 7, 6,
-		//Right CCW
+		//Right
 		1, 5, 2,
 		6, 2, 5,
-		//Left CCW
+		//Left
 		4, 0, 7,
 		3, 7, 0,
-		//Top CCW
+		//Top
 		2, 6, 7,
 		2, 7, 3,
-		//Btm CCW
+		//Btm
 		0, 4, 5,
 		0, 5, 1
 	};
@@ -263,7 +368,6 @@ void Model::CreateModelCube()
 		{1.0f, 1.0f},  // Top-right
 		{0.0f, 1.0f},   // Top-left
 	};
-	
 	const std::vector<glm::vec2> basisUV_RL =
 	{
 		{0.0f, 0.0f},  // Bottom-left
@@ -280,7 +384,6 @@ void Model::CreateModelCube()
 			UV.insert(UV.end(), basisUV_RL.begin(), basisUV_RL.end());
 		else
 			UV.insert(UV.end(), basisUV_FB.begin(), basisUV_FB.end());
-
 	}
 
 	//Use to calculate Normal vector's average=====================
@@ -314,8 +417,6 @@ void Model::CreateModelCube()
 		avgCnt[pointIndeces[i + 1]] += 1;
 		avgCnt[pointIndeces[i + 2]] += 1;
 	}
-
-	
 
 	CalculateNormals();
 
@@ -375,6 +476,9 @@ void Model::CreateModelCone(int slices)
 		comNormal.push_back(nor);
 	}
 
+	//In Future
+	//normal 벡터 slices 증가할때마다 줄어드는 현상 고치기
+	//AVGnormal vec 구하기
 	CalculateNormals();
 }
 
@@ -396,61 +500,6 @@ void Model::CreateModelSphere(int slices)
 	//TODO: Normals
 }
 
-void Model::CreateModels()
-{
-	glDeleteBuffers(1, &VBO);
-	glDeleteVertexArrays(1, &VAO);
-
-	//load points
-	LoadModel();
-
-	int s = points.size();
-	//vertices
-	for (int i = 0; i < s; i++)
-	{
-		//points
-		vertices.push_back(points[i].x);
-		vertices.push_back(points[i].y);
-		vertices.push_back(points[i].z);
-		//normals
-		vertices.push_back(comNormal[i].x);
-		vertices.push_back(comNormal[i].y);
-		vertices.push_back(comNormal[i].z);
-		//UV
-		vertices.push_back(UV[i].x);
-		vertices.push_back(UV[i].y);
-	}
-
-	//Sanity Check
-	if (vertices.size() == 0)
-		return;
-
-	//Gen VAO
-	glGenVertexArrays(1, &VAO);
-	glBindVertexArray(VAO);
-
-	//Gen VBO
-	glGenBuffers(1, &VBO);
-	glBindBuffer(GL_ARRAY_BUFFER, VBO);
-	glBufferData(GL_ARRAY_BUFFER, vertices.size() * (sizeof(float)), &vertices[0], GL_STATIC_DRAW);
-
-	//Assign Coordinates
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
-	glEnableVertexAttribArray(0);
-
-	//Assign Normals
-	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
-	glEnableVertexAttribArray(1);
-
-	//Assign UV
-	glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
-	glEnableVertexAttribArray(2);
-
-	CreateTextureData();
-
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
-	glBindVertexArray(0);
-}
 
 void Model::CalculateNormals()
 {

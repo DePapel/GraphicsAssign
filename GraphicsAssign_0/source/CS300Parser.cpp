@@ -165,6 +165,7 @@ void CS300Parser::LoadDataFromFile(const char * filename)
                 objects.back().ns = ns;
             }
         }
+        //Light ºÎºÐ
         else if (id == "light")
         {
             Light newLight;
