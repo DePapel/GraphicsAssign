@@ -5,6 +5,7 @@
 
 class GLFWwindow;
 class Model;
+class Light;
 
 #include <vector>
 #include "program.h"
@@ -29,7 +30,6 @@ struct Level
 	bool keyStateW = false, keyStateS = false, keyStateA = false, keyStateD = false;
 	bool comavgSw, shaderSW, norOnOffSW = false, wireSW = false;
 
-	glm::vec4 drawColor = { 1.0f, 1.0f, 1.0f, 1.0f };
 private:
 	void Render(Model*);
 	Level();
@@ -42,6 +42,7 @@ private:
 	GLFWwindow* window;
 
 	std::vector<Model*> allObjects;
+	std::vector<Light*> allLights;
 
 
 
@@ -71,22 +72,3 @@ private:
 public:
 	const std::vector<Model*>& getAllObject() { return allObjects; }
 };
-
-//struct Light
-//{
-//	int  type;
-//
-//	glm::vec3 ambient;
-//	glm::vec3 diffuse;
-//	glm::vec3 specular;
-//
-//	glm::vec3 position;
-//
-//	//ambientColor;
-//	//diffuseColor;
-//	//specularColor;
-//	//positionWorld;
-//	//  other variables 
-//	//  ...
-//};
-//std::vector<Light*> lights;

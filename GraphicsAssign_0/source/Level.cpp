@@ -55,7 +55,7 @@ int Level::Initialize()
 
 	for (auto o : parser.lights)
 	{
-		allObjects.push_back(new Model(o));
+		allLights.push_back(new Light(o));
 	}
 	//First Make a Light Model
 	//parser light -> real light obj
@@ -74,8 +74,8 @@ int Level::Initialize()
 	
 	//Shader program
 	ReloadShaderProgram();
-	//glEnable(GL_CULL_FACE);
 
+	glEnable(GL_CULL_FACE);
 	//glFrontFace(GL_CW);
 
 	glEnable(GL_DEPTH_TEST);
@@ -134,6 +134,10 @@ void Level::Run()
 			//Render the object
 			Render(o);
 		}
+		for (auto l : allLights)
+		{
+			Render(l->m);
+		}
 
 		glUseProgram(0);
 
@@ -152,14 +156,12 @@ void Level::Cleanup()
 
 	DeletePtr();
 }
-
 Level* Level::GetPtr()
 {
 	if (!ptr)
 		ptr = new Level;
 	return ptr;
 }
-
 void Level::DeletePtr()
 {
 	if (ptr)
@@ -214,7 +216,6 @@ void Level::Joom(float val)
 	val *= 0.01f;
 	cam.camPos += val * (cam.camTarget - cam.camPos);
 }
-
 void Level::RotateCamX(float angle)
 {
 	glm::vec3 right = glm::cross(cam.camUp, cam.camPos - cam.camTarget);
@@ -223,7 +224,6 @@ void Level::RotateCamX(float angle)
 	if (abs(rotVec.z) > 0.1f)
 		cam.camPos = cam.camTarget - rotVec;
 }
-
 void Level::RotateCamY(float angle)
 {
 	cam.camPos = cam.camTarget - glm::vec3(glm::rotate(glm::identity<glm::mat4>(), glm::radians(-angle), cam.camUp) * glm::vec4(cam.camTarget - cam.camPos,1));
@@ -231,52 +231,43 @@ void Level::RotateCamY(float angle)
 
 void Level::Render(Model* obj)
 {
-	//use obj VBO
+
+	if (obj->transf.name != "Light")
+	{
+		shader->setUniform("lineSW", false);
+		shader->setUniform("lightSW", false);
+	}
+	else
+	{
+		shader->setUniform("lineSW", false);
+		shader->setUniform("lightSW", true);
+	}
 	glBindBuffer(GL_ARRAY_BUFFER, obj->VBO);
-	//use obj VAO
 	glBindVertexArray(obj->VAO);
 
 	//Send model matrix to the shader
 
 	glm::mat4x4 m2w = obj->ComputeMatrix();
-
 	//Send view matrix to the shader
-	shader->setUniform("model", cam.ProjMat * cam.ViewMat * m2w);
 
-	//uniform 던져주기============================================
-	//glActiveTexture(GL_TEXTURE0);
+	glm::mat4x4 CameraMatrix = cam.ProjMat * cam.ViewMat;
+
+	shader->setUniform("model", m2w);
+	shader->setUniform("camera", CameraMatrix);
 	glBindTexture(GL_TEXTURE_2D, obj->textureID);
 	shader->setUniform("myTextureSampler", 0);
 	shader->setUniform("shaderSW", shaderSW);
-	
-	//=====================================================
 
-	//shader->setUniform("uLightNum", int(lights.size()));
-	//for (size_t i = 0; i < lights.size(); i++)
-	//{
-	//	shader->setUniform("uLight[" + std::to_string(i) + "].type", int(lights[i]->type));
-	//
-	//	shader->setUniform("uLight[" + std::to_string(i) + "].ambient", lights[i]->ambientColor);
-	//	shader->setUniform("uLight[" + std::to_string(i) + "].diffuse", lights[i]->diffuseColor);
-	//	shader->setUniform("uLight[" + std::to_string(i) + "].specular", lights[i]->specularColor);
-	//
-	//	shader->setUniform("uLight[" + std::to_string(i) + "].positionWorld", lights[i]->positionWorld);
-	//
-	//	//  other variables 
-	//	//  ...
-	//}
-
-	//draw
 	if (wireSW)
 		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 	else
 		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-		
-	shader->setUniform("lineSW", false);
 	glDrawArrays(GL_TRIANGLES, 0, obj->points.size());
 
+
+	//Line
 	shader->setUniform("lineSW", true);
-	shader->setUniform("lineColor", drawColor);
+	shader->setUniform("lightSW", false);
 	glBindBuffer(GL_ARRAY_BUFFER, obj->norVBO);
 	glBindVertexArray(obj->norVAO);
 
@@ -284,8 +275,33 @@ void Level::Render(Model* obj)
 		glDrawArrays(GL_LINES, 0, obj->drawNormal.size());
 
 
-	glBindBuffer(GL_ARRAY_BUFFER,0);
-	glBindVertexArray(0);
+	shader->setUniform("uLightNum", int(allLights.size()));
+	for (size_t i = 0; i < allLights.size(); i++)
+	{
+		//Type of light
+		shader->setUniform("uLight[" + std::to_string(i) + "].type", int(allLights[i]->type));
+
+		shader->setUniform("uLight[" + std::to_string(i) + "].ambient", allLights[i]->ambient);
+		shader->setUniform("uLight[" + std::to_string(i) + "].diffuse", allLights[i]->diffuse);
+		shader->setUniform("uLight[" + std::to_string(i) + "].specular", allLights[i]->specular);
+		//Position
+		shader->setUniform("uLight[" + std::to_string(i) + "].positionWorld", allLights[i]->position);
+		//Direction
+		//Angle
+
+		//Material shininess --> (ns)
+		shader->setUniform("Mshininess", obj->transf.ns);
+
+		//Cameara Position
+		shader->setUniform("CameraPosition", cam.camPos);
+
+		//Light Attenuation
+		shader->setUniform("atten", allLights[i]->atten);
+
+		//  other variables 
+		//  ...
+	}
+
 }
 
 
@@ -298,6 +314,9 @@ Level::~Level()
 {
 	for (auto m : allObjects)
 		delete m;
+	for (auto l : allLights)
+		delete l;
 
 	allObjects.clear();
+	allLights.clear();
 }

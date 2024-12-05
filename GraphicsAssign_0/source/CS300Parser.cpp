@@ -168,7 +168,7 @@ void CS300Parser::LoadDataFromFile(const char * filename)
         //Light ºÎºÐ
         else if (id == "light")
         {
-            Light newLight;
+            Light_info newLight;
 
             lights.push_back(newLight);
             last = LastAdded::LIGHT;

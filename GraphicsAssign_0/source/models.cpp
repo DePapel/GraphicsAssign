@@ -10,7 +10,7 @@
 #include "Level.h"
 #include <iostream>
 
-int Model::slices = 5;
+int Model::slices = 4;
 
 void Model::CreateTextureData()
 {
@@ -90,17 +90,8 @@ glm::mat4x4 Model::ComputeMatrix()
 
 void Model::LoadModel()
 {
-	points.clear();
-	normals.clear();
-	comNormal.clear();
-	avgNormal.clear();
-	drawNormal.clear();
-	avgCnt.clear();
+	ClearAll();
 
-	pointIndeces.clear();
-	normalIndeces.clear();
-	UV.clear();
-	vertices.clear();
 	//If exception. use one of our functions
 	if (transf.mesh == "PLANE")
 		CreateModelPlane();
@@ -222,58 +213,6 @@ Model::Model(const CS300Parser::Transform& _transform) : transf(_transform), VBO
 	CreateModels();
 }
 
-Model::Model(const CS300Parser::Light& _light)
-{
-	glDeleteBuffers(1, &VBO);
-	glDeleteVertexArrays(1, &VAO);
-
-	//All LightModel must be Sphere!! BUT now I can use 'Cube' Model
-	CreateModelCube();
-
-	//Change to Lights
-	int s = points.size();
-	//vertices
- 	for (int i = 0; i < s; i++)
-	{
-		//points
-		vertices.push_back(points[i].x);
-		vertices.push_back(points[i].y);
-		vertices.push_back(points[i].z);
-		//normals
-		vertices.push_back(comNormal[i].x);
-		vertices.push_back(comNormal[i].y);
-		vertices.push_back(comNormal[i].z);
-		//UV
-		vertices.push_back(UV[i].x);
-		vertices.push_back(UV[i].y);
-	}
-
-	//Gen VAO
-	glGenVertexArrays(1, &VAO);
-	glBindVertexArray(VAO);
-
-	//Gen VBO
-	glGenBuffers(1, &VBO);
-	glBindBuffer(GL_ARRAY_BUFFER, VBO);
-	glBufferData(GL_ARRAY_BUFFER, vertices.size() * (sizeof(float)), &vertices[0], GL_STATIC_DRAW);
-
-	//Assign Coordinates
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
-	glEnableVertexAttribArray(0);
-
-	//Assign Normals
-	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
-	glEnableVertexAttribArray(1);
-
-	//Assign UV
-	glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
-	glEnableVertexAttribArray(2);
-
-	CreateTextureData();
-
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
-	glBindVertexArray(0);
-}
 Model::~Model()
 {
 	glDeleteBuffers(1, &VBO);
@@ -290,9 +229,9 @@ void Model::CreateModelPlane()
 	   {-0.5f, -0.5f, 0.0f},  // Bottom-left
 	   {0.5f, -0.5f, 0.0f},   // Bottom-right
 	   {0.5f, 0.5f, 0.0f},    // Top-right
-	   {-0.5f, 0.5f, 0.0f},    // Top-left
+	   {-0.5f, -0.5f, 0.0f},  // Bottom-left
 	   {0.5f, 0.5f, 0.0f},    // Top-right
-	   {-0.5f, -0.5f, 0.0f}  // Bottom-left
+	   {-0.5f, 0.5f, 0.0f},    // Top-left
 	};
 
 	// UV coordinates
@@ -301,9 +240,9 @@ void Model::CreateModelPlane()
 		{0.0f, 0.0f},  // Bottom-left
 		{1.0f, 0.0f},  // Bottom-right
 		{1.0f, 1.0f},  // Top-right
-		{0.0f, 1.0f},   // Top-left
-		{1.0f, 1.0f},  // Top-right
 		{0.0f, 0.0f},  // Bottom-left
+		{1.0f, 1.0f},  // Top-right
+		{0.0f, 1.0f},   // Top-left
 	};
 
 	// Normals (pointing up for all vertices)
@@ -429,9 +368,8 @@ void Model::CreateModelCone(int slices)
 	glm::vec3 topPoint = { 0.0f, 0.5f, 0.0f };
 	glm::vec3 btmPoint = { 0.0f, -0.5f, 0.0f };
 	glm::vec3 pointA, pointB, vecA, vecB, nor;
-	//TODO: Points
-	//TODO: UVs
-	//TODO: Normals
+
+	//avgNormal.resize(slices + 1); //slices와 TopPoint의 1개를 더한 크기로 사이즈 재 조절
 
 	//Wall
 	for (int i = 0; i < slices; i++)
@@ -439,16 +377,16 @@ void Model::CreateModelCone(int slices)
 		points.push_back(topPoint);
 		UV.push_back({ (i + 0.5f) / (float)slices, 1.0f });
 
-		pointA = { 0.5 * cos(i * angle), -0.5, 0.5 * sin(i * angle) };
+		pointA = { 0.5 * cos((i + 1) * angle), -0.5, 0.5 * sin((i + 1) * angle) };
 		points.push_back(pointA);
+		UV.push_back({ (i + 1) / (float)slices, 0.0f });
+		
+		pointB = { 0.5 * cos(i * angle), -0.5, 0.5 * sin(i * angle) };
+		points.push_back(pointB);
 		UV.push_back({ i / (float)slices, 0.0f });
 
-		pointB = { 0.5 * cos((i + 1) * angle), -0.5, 0.5 * sin((i + 1) * angle) };
-		points.push_back(pointB);
-		UV.push_back({ (i + 1) / (float)slices, 0.0f });
-
-		vecA = pointA - topPoint;
-		vecB = topPoint - pointB;
+		vecA = pointB - topPoint;
+		vecB = topPoint - pointA;
 		nor = glm::cross(vecA, vecB);
 		comNormal.push_back(nor);
 		comNormal.push_back(nor);
@@ -500,7 +438,6 @@ void Model::CreateModelSphere(int slices)
 	//TODO: Normals
 }
 
-
 void Model::CalculateNormals()
 {
 	//Normals coordinates
@@ -546,4 +483,48 @@ void Model::CalculateNormals()
 	glBufferData(GL_ARRAY_BUFFER, drawNormal.size() * (sizeof(float) * 3), &drawNormal[0], GL_STATIC_DRAW);
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
 	glEnableVertexAttribArray(0);
+}
+
+void Model::ClearAll()
+{
+	points.clear();
+	normals.clear();
+	comNormal.clear();
+	avgNormal.clear();
+	drawNormal.clear();
+	avgCnt.clear();
+	pointIndeces.clear();
+	normalIndeces.clear();
+	UV.clear();
+	vertices.clear();
+}
+
+Light::Light(const CS300Parser::Light_info &_light)
+{
+	CS300Parser::Transform T;
+
+	//Create Light's Model
+	T.name = "Light";
+	T.mesh = "CUBE";
+	//T.normalMap = default
+	T.pos = _light.pos;
+	T.rot = glm::vec3(1.0f, 1.0f, 1.0f);
+	T.sca = glm::vec3(5.0f, 5.0f, 5.0f);
+	//ns        = default
+	//ior       = default
+	//reflector = default
+	m = new Model(T);
+
+	//Input variable from _light
+	ambient  = _light.amb;
+	diffuse  = _light.col;
+	specular = _light.col;
+	position = _light.pos;
+
+	atten = _light.att;
+}
+
+Light::~Light()
+{
+	delete m;
 }

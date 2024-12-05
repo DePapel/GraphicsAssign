@@ -32,8 +32,8 @@ class CS300Parser
         glm::vec3 pos;
         glm::vec3 rot;
         glm::vec3 sca;
-        float     ns        = 10.0f;
-        float     ior       = 1.33f;
+        float     ns = 10.0f;
+        float     ior = 1.33f;
         bool      reflector = false;
 
         std::vector<Animations::Anim> anims;
@@ -41,7 +41,7 @@ class CS300Parser
 
     std::vector<Transform> objects;
 
-    struct Light
+    struct Light_info
     {
         glm::vec3 pos;
         glm::vec3 dir;
@@ -58,8 +58,7 @@ class CS300Parser
 
         std::vector<Animations::Anim> anims;
     };
-    std::vector<Light> lights;
-
+    std::vector<Light_info> lights;
     std::array<std::string, 6> environmentMap;
 
   private:

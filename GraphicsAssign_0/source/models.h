@@ -5,7 +5,6 @@
 struct Model
 {
 	CS300Parser::Transform transf;
-	//CS300Parser::Light light;
 
 	glm::mat4x4 ComputeMatrix();
 
@@ -30,18 +29,18 @@ struct Model
 	unsigned int norVBO;
 	unsigned int norVAO;
 	std::vector<glm::vec3> drawNormal;
-	float rejustSize = 0.5f;
+	float rejustSize = 0.3f;
 	static int slices;
 	
 	void CreateTextureData();
 	void CalculateNormals();
 	//======================================
+	void ClearAll();
 
 	void LoadModel();
 	void CreateModels();
 	Model(const CS300Parser::Transform& _transform);
 
-	Model(const CS300Parser::Light& _light);
 	~Model();
 	
 private:
@@ -51,4 +50,22 @@ private:
 	void CreateModelCone(int slices);
 	void CreateModelCylinder(int slices);
 	void CreateModelSphere(int slices);
+};
+
+struct Light
+{
+	Model* m;
+	int  type;
+	
+	float ambient; 
+	glm::vec3 diffuse; 
+	glm::vec3 specular;
+	glm::vec3 position;
+	
+	glm::vec3 atten;
+
+	Light(const CS300Parser::Light_info& _light);
+	~Light();
+	//  other variables 
+	//  ...
 };
