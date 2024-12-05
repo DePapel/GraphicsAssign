@@ -279,7 +279,7 @@ void Level::Render(Model* obj)
 	for (size_t i = 0; i < allLights.size(); i++)
 	{
 		//Type of light
-		shader->setUniform("uLight[" + std::to_string(i) + "].type", int(allLights[i]->type));
+		shader->setUniform("uLight[" + std::to_string(i) + "].type", GetType(allLights[i]->type));
 
 		shader->setUniform("uLight[" + std::to_string(i) + "].ambient", allLights[i]->ambient);
 		shader->setUniform("uLight[" + std::to_string(i) + "].diffuse", allLights[i]->diffuse);
@@ -287,20 +287,23 @@ void Level::Render(Model* obj)
 		//Position
 		shader->setUniform("uLight[" + std::to_string(i) + "].positionWorld", allLights[i]->position);
 		//Direction
+		shader->setUniform("uLight[" + std::to_string(i) + "].dir", allLights[i]->direct);
+		//Att
+		shader->setUniform("uLight[" + std::to_string(i) + "].atten", allLights[i]->atten);
+
 		//Angle
 
-		//Material shininess --> (ns)
-		shader->setUniform("Mshininess", obj->transf.ns);
-
-		//Cameara Position
-		shader->setUniform("CameraPosition", cam.camPos);
-
 		//Light Attenuation
-		shader->setUniform("atten", allLights[i]->atten);
 
 		//  other variables 
 		//  ...
 	}
+
+	//Material shininess --> (ns)
+	shader->setUniform("Mshininess", obj->transf.ns);
+
+	//Cameara Position
+	shader->setUniform("CameraPosition", cam.camPos);
 
 }
 
@@ -319,4 +322,14 @@ Level::~Level()
 
 	allObjects.clear();
 	allLights.clear();
+}
+
+int Level::GetType(std::string _type)
+{
+	if (_type == "POINT")
+		return 0;
+	else if (_type == "DIR")
+		return 1;
+	else if (_type == "SPOT")
+		return 2;
 }

@@ -8,6 +8,13 @@
 
 #include "animations.h"
 
+enum LightType
+{
+    POINT,
+    DIR,
+    SPOT
+};
+
 class CS300Parser
 {
   public:

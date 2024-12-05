@@ -55,15 +55,15 @@ private:
 struct Light
 {
 	Model* m;
-	int  type;
+	std::string type;
 	
 	float ambient; 
 	glm::vec3 diffuse; 
 	glm::vec3 specular;
 	glm::vec3 position;
-	
 	glm::vec3 atten;
 
+	glm::vec3 direct;
 	Light(const CS300Parser::Light_info& _light);
 	~Light();
 	//  other variables 

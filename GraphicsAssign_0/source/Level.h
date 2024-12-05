@@ -71,4 +71,5 @@ private:
 
 public:
 	const std::vector<Model*>& getAllObject() { return allObjects; }
+	int GetType(std::string _type);
 };

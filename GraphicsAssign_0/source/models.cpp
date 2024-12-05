@@ -515,6 +515,7 @@ Light::Light(const CS300Parser::Light_info &_light)
 	//reflector = default
 	m = new Model(T);
 
+	type = _light.type;
 	//Input variable from _light
 	ambient  = _light.amb;
 	diffuse  = _light.col;
@@ -522,6 +523,7 @@ Light::Light(const CS300Parser::Light_info &_light)
 	position = _light.pos;
 
 	atten = _light.att;
+	direct = _light.dir;
 }
 
 Light::~Light()

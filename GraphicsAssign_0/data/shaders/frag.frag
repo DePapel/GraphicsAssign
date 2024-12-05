@@ -16,12 +16,16 @@ uniform int uLightNum;
 
 struct Light
 {
+	int type;
 	float ambient;
     vec3 diffuse;
     vec3 specular;
 	vec3 positionWorld;
+	vec3 dir;
+	vec3 atten;
+
 };
-uniform Light uLight[1];
+uniform Light uLight[2];
 
 //Material Property
 uniform float Mshininess; 	//Material shininess
@@ -29,18 +33,8 @@ uniform float Mshininess; 	//Material shininess
 //Camera Position
 uniform vec3 CameraPosition;
 
-//Attenuation
-uniform vec3 atten;
-
 void main()
 {   
-	//Light Property
-	float light_ambient = uLight[0].ambient; //(Ia)
-	vec3 light_diffuse = uLight[0].diffuse; //(Id)
-	vec3 light_specular = uLight[0].specular; //(Is)
-	
-	vec3 lPos = uLight[0].positionWorld;
-	
 	//Material Property
 	float Mambient; 	//(Ka)
 	Mambient = 1.0;
@@ -55,41 +49,51 @@ void main()
 	
 	
 	//Start loop===================================
-	//Calculate Light Direction
-	vec3 lightDir = normalize(lPos - Position); // (L)
-	
-	//***Ambient***
-	
-	vec3 col = vec4(UV, 0.0, 1.0).xyz;
-	
-	if(!shaderSW)
+	for(int i=0; i<uLightNum; i++)
 	{
-		col = texture(myTextureSampler, UV).xyz;
+		//Light Property
+		float light_ambient = uLight[i].ambient; //(Ia)
+		vec3 light_diffuse = uLight[i].diffuse; //(Id)
+		vec3 light_specular = uLight[i].specular; //(Is)
+		
+		vec3 lPos = uLight[i].positionWorld;
+		
+		//Calculate Light Direction
+		vec3 lightDir;
+		if(uLight[i].type == 0) //POINT
+			lightDir = normalize(lPos - Position); // (L)
+		else if(uLight[i].type == 1) //DIR
+			lightDir = -uLight[i].dir; // (L)
+		
+		//***Ambient***
+		vec3 col = vec4(UV, 0.0, 1.0).xyz;
+		if(!shaderSW)
+		{
+			col = texture(myTextureSampler, UV).xyz;
+		}
+		vec3 ambient = light_ambient * Mambient * col;
+		Mdiffuse = col;
+		
+		//***Diffuse***
+		float diff = 1;//max(dot(Nor, lightDir), 0.0);
+		vec3 diffuse = light_diffuse * Mdiffuse * diff;
+		
+		//***Specular***
+		vec3 reflectionVec = 2.0 * (dot(Nor, lightDir))* Nor - lightDir;
+		float spec = pow(max(dot(reflectionVec, viewDir), 0.0), Mshininess);
+		vec3 specular = light_specular * Mspecular * spec;
+	
+		//Calculate Attenuation
+		float dis = distance(Position, lPos);
+		float att = min(1.0/(uLight[i].atten.x + uLight[i].atten.y*dis + uLight[i].atten.z*dis*dis), 1);
+	
+		resultColor += ambient + att*(diffuse + specular);
+		
+		//resultColor += (specular);
+		
+		//End loop======================================================
 	}
 	
-	
-	vec3 ambient = light_ambient * Mambient * col;
-	
-	Mdiffuse = col;
-	
-	//***Diffuse***
-	float diff = 1;//max(dot(Nor, lightDir), 0.0);
-	vec3 diffuse = light_diffuse * Mdiffuse * diff;
-	
-	//***Specular***
-	vec3 reflectionVec = 2.0 * (dot(Nor, lightDir))* Nor - lightDir;
-	float spec = pow(max(dot(reflectionVec, viewDir), 0.0), Mshininess);
-	vec3 specular = light_specular * Mspecular * spec;
-
-	
-	//Calculate Attenuation
-	float dis = distance(Position, lPos);
-	float att = min(1.0/(atten.x + atten.y*dis + atten.z*dis*dis), 1);
-
-
-	resultColor += ambient + att*(diffuse + specular);
-	//End loop======================================================
-
 	FragColor = vec4(resultColor, 1.0);
 	
 	if(lineSW || lightSW)
