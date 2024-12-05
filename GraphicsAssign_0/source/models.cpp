@@ -499,7 +499,7 @@ void Model::ClearAll()
 	vertices.clear();
 }
 
-Light::Light(const CS300Parser::Light_info &_light)
+Light::Light(const CS300Parser::Light_info& _light)
 {
 	CS300Parser::Transform T;
 
@@ -517,13 +517,17 @@ Light::Light(const CS300Parser::Light_info &_light)
 
 	type = _light.type;
 	//Input variable from _light
-	ambient  = _light.amb;
-	diffuse  = _light.col;
+	ambient = _light.amb;
+	diffuse = _light.col;
 	specular = _light.col;
 	position = _light.pos;
 
 	atten = _light.att;
 	direct = _light.dir;
+
+	inner = _light.inner;
+	outer = _light.outer;
+	falloff = _light.falloff;
 }
 
 Light::~Light()

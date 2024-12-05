@@ -292,6 +292,9 @@ void Level::Render(Model* obj)
 		shader->setUniform("uLight[" + std::to_string(i) + "].atten", allLights[i]->atten);
 
 		//Angle
+		shader->setUniform("uLight[" + std::to_string(i) + "].inner", allLights[i]->inner);
+		shader->setUniform("uLight[" + std::to_string(i) + "].outer", allLights[i]->outer);
+		shader->setUniform("uLight[" + std::to_string(i) + "].falloff", allLights[i]->falloff);
 
 		//Light Attenuation
 

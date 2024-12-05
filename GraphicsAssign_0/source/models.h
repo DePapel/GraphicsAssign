@@ -64,6 +64,11 @@ struct Light
 	glm::vec3 atten;
 
 	glm::vec3 direct;
+
+	float inner;
+	float outer;
+	float falloff;
+
 	Light(const CS300Parser::Light_info& _light);
 	~Light();
 	//  other variables 
