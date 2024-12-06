@@ -509,7 +509,7 @@ Light::Light(const CS300Parser::Light_info& _light)
 	//T.normalMap = default
 	T.pos = _light.pos;
 	T.rot = glm::vec3(1.0f, 1.0f, 1.0f);
-	T.sca = glm::vec3(5.0f, 5.0f, 5.0f);
+	T.sca = glm::vec3(1.0f, 1.0f, 1.0f);
 	//ns        = default
 	//ior       = default
 	//reflector = default

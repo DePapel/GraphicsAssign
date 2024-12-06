@@ -57,7 +57,7 @@ struct Light
 	Model* m;
 	std::string type;
 	
-	float ambient; 
+	float ambient = 0.0f; 
 	glm::vec3 diffuse; 
 	glm::vec3 specular;
 	glm::vec3 position;
@@ -65,9 +65,9 @@ struct Light
 
 	glm::vec3 direct;
 
-	float inner;
-	float outer;
-	float falloff;
+	float inner = 0.0f;
+	float outer = 0.0f;
+	float falloff = 0.0f;
 
 	Light(const CS300Parser::Light_info& _light);
 	~Light();

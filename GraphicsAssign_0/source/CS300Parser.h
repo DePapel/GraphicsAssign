@@ -39,7 +39,7 @@ class CS300Parser
         glm::vec3 pos;
         glm::vec3 rot;
         glm::vec3 sca;
-        float     ns = 10.0f;
+        float     ns = 60.0f;
         float     ior = 1.33f;
         bool      reflector = false;
 

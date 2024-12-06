@@ -65,7 +65,7 @@ void main()
 		
 		//Calculate Light Direction
 		vec3 lightDir;
-		if(uLight[i].type == 0 || uLight[i].type == 3) //POINT
+		if(uLight[i].type == 0 || uLight[i].type == 2) //POINT
 			lightDir = normalize(lPos - Position); // (L)
 		else if(uLight[i].type == 1) //DIR
 			lightDir = -uLight[i].dir; // (L)
@@ -76,6 +76,7 @@ void main()
 		{
 			col = texture(myTextureSampler, UV).xyz;
 		}
+		
 		vec3 ambient = light_ambient * Mambient * col;
 		Mdiffuse = col;
 		
@@ -92,17 +93,22 @@ void main()
 		float dis = distance(Position, lPos);
 		float att = min(1.0/(uLight[i].atten.x + uLight[i].atten.y*dis + uLight[i].atten.z*dis*dis), 1);
 	
-		if(uLight[i].type == 3) //SPOT
+		if(uLight[i].type == 2) //SPOT
 		{
 			vec3 dirSpot = normalize(uLight[i].dir);
 			float LdotD = dot(lightDir, dirSpot);
 			float effectAngle = LdotD / (length(lightDir) * length(dirSpot));
 			
 			float SpotLightEffect = pow(effectAngle - cos(uLight[i].outer) / cos(uLight[i].inner) - cos(uLight[i].outer), uLight[i].falloff);
+		
+			SpotLightEffect = clamp(SpotLightEffect, 0.0, 1.0);
+			
+			resultColor += ambient + SpotLightEffect*(diffuse + specular);
 		}
-		
-		resultColor += ambient + att*(diffuse + specular);
-		
+		else
+		{
+			resultColor += ambient + att*(diffuse + specular);
+		}
 		
 		//End loop======================================================
 	}
