@@ -17,5 +17,5 @@ void main()
    
    Position = (model * vPosition).xyz;
    UV = vTextCoords;
-   Nor = vNormals;
+   Nor = normalize((model * vec4(vNormals, 0.0)).xyz);
 }

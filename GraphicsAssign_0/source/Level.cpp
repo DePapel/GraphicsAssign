@@ -45,7 +45,7 @@ int Level::Initialize()
 
 	//Load Scene
 	CS300Parser parser;
-	parser.LoadDataFromFile("data/scenes/test.txt");
+	parser.LoadDataFromFile("data/scenes/scene_A2.txt");
 
 	//Convert from parser->obj to Model
 	for (auto o : parser.objects)

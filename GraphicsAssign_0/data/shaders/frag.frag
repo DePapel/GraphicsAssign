@@ -7,6 +7,7 @@ in vec2 UV;			//Material UV
 in vec3 Nor; 		//Material Normal (N)
 
 uniform sampler2D myTextureSampler;
+uniform sampler2D normalTexture;
 uniform bool shaderSW;
 uniform bool lineSW;
 uniform bool lightSW;
@@ -52,6 +53,9 @@ void main()
 	//Result Calculated Color
 	vec3 resultColor = vec3(0.0);
 	
+	//TEST======================
+	vec3 test;
+	//======================
 	
 	//Start loop===================================
 	for(int i=0; i<uLightNum; i++)
@@ -65,7 +69,7 @@ void main()
 		
 		//Calculate Light Direction
 		vec3 lightDir;
-		if(uLight[i].type == 0 || uLight[i].type == 2) //POINT
+		if(uLight[i].type == 0 || uLight[i].type == 2) //POINT and SPOT
 			lightDir = normalize(lPos - Position); // (L)
 		else if(uLight[i].type == 1) //DIR
 			lightDir = -uLight[i].dir; // (L)
@@ -117,4 +121,6 @@ void main()
 	
 	if(lineSW || lightSW)
 		FragColor = vec4(1.0, 1.0, 1.0, 1.0);
+		
+	//FragColor = vec4((Nor+vec3(1,1,1)/2.0f),1);
 }
