@@ -254,8 +254,20 @@ void Level::Render(Model* obj)
 
 	shader->setUniform("model", m2w);
 	shader->setUniform("camera", CameraMatrix);
-	glBindTexture(GL_TEXTURE_2D, obj->textureID);
+	
+	//TBN===========================================
+	//shader->setUniform("tangent", obj->tangent);
+	//shader->setUniform("bitangent", obj->bitangent);
+	//==============================================
+
+	//Color Texture Binding
+	glBindTextureUnit(0, obj->colorID);
 	shader->setUniform("myTextureSampler", 0);
+
+	//Image Texture Binding
+	glBindTextureUnit(1, obj->imageID);
+	shader->setUniform("normalTexture", 1); //maybe 1.
+
 	shader->setUniform("shaderSW", shaderSW);
 
 	if (wireSW)
@@ -280,7 +292,7 @@ void Level::Render(Model* obj)
 	{
 		//Type of light
 		shader->setUniform("uLight[" + std::to_string(i) + "].type", GetType(allLights[i]->type));
-
+		//Properity of light
 		shader->setUniform("uLight[" + std::to_string(i) + "].ambient", allLights[i]->ambient);
 		shader->setUniform("uLight[" + std::to_string(i) + "].diffuse", allLights[i]->diffuse);
 		shader->setUniform("uLight[" + std::to_string(i) + "].specular", allLights[i]->specular);
@@ -288,15 +300,13 @@ void Level::Render(Model* obj)
 		shader->setUniform("uLight[" + std::to_string(i) + "].positionWorld", allLights[i]->position);
 		//Direction
 		shader->setUniform("uLight[" + std::to_string(i) + "].dir", allLights[i]->direct);
-		//Att
+		//Light Attenuation
 		shader->setUniform("uLight[" + std::to_string(i) + "].atten", allLights[i]->atten);
-
 		//Angle
 		shader->setUniform("uLight[" + std::to_string(i) + "].inner", allLights[i]->inner);
 		shader->setUniform("uLight[" + std::to_string(i) + "].outer", allLights[i]->outer);
 		shader->setUniform("uLight[" + std::to_string(i) + "].falloff", allLights[i]->falloff);
 
-		//Light Attenuation
 
 		//  other variables 
 		//  ...

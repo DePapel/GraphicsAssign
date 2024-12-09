@@ -24,16 +24,23 @@ struct Model
 	//My Extra Code=========================
 	unsigned int VBO;
 	unsigned int VAO;
-	unsigned int textureID;
+	unsigned int colorID;
+	unsigned int imageID;
+	void CreateColorTextureData();
+	void CreateNormalMap();
 
 	unsigned int norVBO;
 	unsigned int norVAO;
 	std::vector<glm::vec3> drawNormal;
 	float rejustSize = 0.3f;
 	static int slices;
-	
-	void CreateTextureData();
 	void CalculateNormals();
+	
+	std::vector<glm::vec3> tangent;
+	std::vector<glm::vec3> bitangent;
+	unsigned int tanVBO;
+	unsigned int bitanVBO;
+	void CalculateTangents();
 	//======================================
 	void ClearAll();
 

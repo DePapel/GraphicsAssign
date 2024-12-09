@@ -98,7 +98,7 @@ namespace cg
         }
 
         void setUniform(const std::string& name, int val) {
-            glUniform1i(getUniformLocation(name), val);
+            glUniform1i(getUniformLocation (name), val);
         }
 
         void setUniform(const std::string& name, bool val) {

@@ -10,12 +10,17 @@
 #include "Level.h"
 #include <iostream>
 
+#define STB_IMAGE_IMPLEMENTATION
+#include "../extern/stb_image.h"
+
+
 int Model::slices = 4;
 
-void Model::CreateTextureData()
+void Model::CreateColorTextureData()
 {
 	const int width = 6;
 	const int height = 6;
+	const int patternSize = 6;
 
 	glm::vec3 colors[] = 
 	{
@@ -32,12 +37,12 @@ void Model::CreateTextureData()
 	{
 		for (int x = 0; x < width; x++) 
 		{
-			int colorIdx = (x + (height - 1 - y)) % 6;
-			for (int py = 0; py < 6; py++) 
+			int colorIdx = (x + (height - 1 - y)) % patternSize;
+			for (int py = 0; py < patternSize; py++)
 			{  // 세로 반복
-				for (int px = 0; px < 6; px++) 
+				for (int px = 0; px < patternSize; px++)
 				{  // 가로 반복
-					int idx = ((y * 6 + py) * width * 6 + (x * 6 + px)) * 3;
+					int idx = ((y * patternSize + py) * width * patternSize + (x * patternSize + px)) * 3;
 					data[idx] = colors[colorIdx].r * 255;
 					data[idx + 1] = colors[colorIdx].g * 255;
 					data[idx + 2] = colors[colorIdx].b * 255;
@@ -47,9 +52,11 @@ void Model::CreateTextureData()
 	}
 
 	//Texture 생성
-	glGenTextures(1, &textureID);
+	glGenTextures(1, &colorID);
+	//어느 Texture에 할건지 active
+	glActiveTexture(GL_TEXTURE0);
 	//TextureID에 바인딩
-	glBindTexture(GL_TEXTURE_2D, textureID);
+	glBindTexture(GL_TEXTURE_2D, colorID);
 	//TextureData 삽입
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width * 6, height * 6, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
 
@@ -60,7 +67,37 @@ void Model::CreateTextureData()
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_MIRRORED_REPEAT);
 
 	delete[] data;
+
+	glBindTexture(GL_TEXTURE_2D, 0);
 }
+
+void Model::CreateNormalMap()
+{
+	int width, height, comp;
+	unsigned char* img = stbi_load(this->transf.normalMap.c_str(), &width, &height, &comp, 4);
+
+	//Texture 생성
+	glGenTextures(1, &imageID);
+	//어느 Texture에 할건지 active
+	glActiveTexture(GL_TEXTURE1);
+	//imageID에 바인딩
+	glBindTexture(GL_TEXTURE_2D, imageID);
+
+	GLenum type = GL_RGBA;
+
+	//imageData 삽입
+	glTexImage2D(GL_TEXTURE_2D, 0, type, width, height, 0, type, GL_UNSIGNED_BYTE, img);
+	
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_MIRRORED_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_MIRRORED_REPEAT);
+
+	stbi_image_free(img);
+	glBindTexture(GL_TEXTURE_2D, 0);
+}
+
+
 
 glm::mat4x4 Model::ComputeMatrix()
 {
@@ -160,6 +197,9 @@ void Model::CreateModels()
 	//load points
 	LoadModel();
 
+	//Calculate Tangents;
+	CalculateTangents();
+
 	int s = points.size();
 	//vertices
 	for (int i = 0; i < s; i++)
@@ -175,7 +215,18 @@ void Model::CreateModels()
 		//UV
 		vertices.push_back(UV[i].x);
 		vertices.push_back(UV[i].y);
+		//Tangents
+		vertices.push_back(tangent[i].x);
+		vertices.push_back(tangent[i].y);
+		vertices.push_back(tangent[i].z);
+
+		//BiTangents
+		vertices.push_back(bitangent[i].x);
+		vertices.push_back(bitangent[i].y);
+		vertices.push_back(bitangent[i].z);
+
 	}
+
 
 	//Sanity Check
 	if (vertices.size() == 0)
@@ -191,18 +242,30 @@ void Model::CreateModels()
 	glBufferData(GL_ARRAY_BUFFER, vertices.size() * (sizeof(float)), &vertices[0], GL_STATIC_DRAW);
 
 	//Assign Coordinates
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 14 * sizeof(float), (void*)0);
 	glEnableVertexAttribArray(0);
 
 	//Assign Normals
-	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
+	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 14 * sizeof(float), (void*)(3 * sizeof(float)));
 	glEnableVertexAttribArray(1);
 
 	//Assign UV
-	glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
+	glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 14 * sizeof(float), (void*)(6 * sizeof(float)));
 	glEnableVertexAttribArray(2);
 
-	CreateTextureData();
+	//Assign Tangent
+	glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, 14 * sizeof(float), (void*)(8 * sizeof(float)));
+	glEnableVertexAttribArray(3);
+
+
+	//Assign biTangent
+	glVertexAttribPointer(4, 3, GL_FLOAT, GL_FALSE, 14 * sizeof(float), (void*)(11 * sizeof(float)));
+	glEnableVertexAttribArray(4);
+
+	//Calculate ColorTexture
+	CreateColorTextureData();
+	//Calculate NormalMapping
+	CreateNormalMap();
 
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 	glBindVertexArray(0);
@@ -216,9 +279,13 @@ Model::Model(const CS300Parser::Transform& _transform) : transf(_transform), VBO
 Model::~Model()
 {
 	glDeleteBuffers(1, &VBO);
-	glDeleteVertexArrays(1, &VAO);
 	glDeleteBuffers(1, &norVBO);
+	glDeleteTextures(1, &colorID);
+	glDeleteTextures(1, &imageID);
+
+	glDeleteVertexArrays(1, &VAO);
 	glDeleteVertexArrays(1, &norVAO);
+	
 }
 
 void Model::CreateModelPlane()
@@ -258,6 +325,7 @@ void Model::CreateModelPlane()
 
 	for (int i = 0; i < comNormal.size(); i++)
 		drawNormal.push_back(comNormal[i]);
+
 }
 
 void Model::CreateModelCube()
@@ -483,6 +551,42 @@ void Model::CalculateNormals()
 	glBufferData(GL_ARRAY_BUFFER, drawNormal.size() * (sizeof(float) * 3), &drawNormal[0], GL_STATIC_DRAW);
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
 	glEnableVertexAttribArray(0);
+}
+
+void Model::CalculateTangents()
+{
+	tangent.resize(points.size());
+	bitangent.resize(points.size());
+	for (int i = 0; i < points.size(); i += 3)
+	{
+		//A B C points
+		glm::vec3 A = points[i];
+		glm::vec3 B = points[i + 1];
+		glm::vec3 C = points[i + 2];
+
+		//UV coordinates
+		glm::vec2 UV0 = UV[i];
+		glm::vec2 UV1 = UV[i + 1];
+		glm::vec2 UV2 = UV[i + 2];
+
+		glm::vec3 V1 = B - A;
+		glm::vec3 V2 = C - A;
+		
+		glm::vec2 deltaTc1 = UV1 - UV0;
+		glm::vec2 deltaTc2 = UV2 - UV0;
+
+		//DIVISION BY 0 DANGER
+		float coefficient = 1.0 / (deltaTc1.y * deltaTc2.x - deltaTc2.y * deltaTc1.x);
+
+		tangent[i] = coefficient * (deltaTc1.y * V2 - deltaTc2.y * V1);
+		tangent[i+1] = coefficient * (deltaTc1.y * V2 - deltaTc2.y * V1);
+		tangent[i+2] = coefficient * (deltaTc1.y * V2 - deltaTc2.y * V1);
+
+		bitangent[i] = coefficient * (deltaTc2.x * V1 - deltaTc1.x * V2);
+		bitangent[i+1] = coefficient * (deltaTc2.x * V1 - deltaTc1.x * V2);
+		bitangent[i+2] = coefficient * (deltaTc2.x * V1 - deltaTc1.x * V2);
+	}
+	
 }
 
 void Model::ClearAll()
