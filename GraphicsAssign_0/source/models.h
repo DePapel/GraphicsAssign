@@ -24,9 +24,8 @@ struct Model
 	//My Extra Code=========================
 	unsigned int VBO;
 	unsigned int VAO;
-	unsigned int colorID;
+
 	unsigned int imageID;
-	void CreateColorTextureData();
 	void CreateNormalMap();
 
 	unsigned int norVBO;
@@ -41,6 +40,9 @@ struct Model
 	unsigned int tanVBO;
 	unsigned int bitanVBO;
 	void CalculateTangents();
+
+	float t = 0.f;
+	void ModelUpdate(float dt);
 	//======================================
 	void ClearAll();
 
@@ -74,8 +76,13 @@ struct Light
 
 	float inner = 0.0f;
 	float outer = 0.0f;
-	float falloff = 0.0f;
+	float falloff = 1.0f;
 
+	float bias = 0.0f;
+	unsigned int pcf = 0;
+
+	float t = 0.f;
+	void LightUpdate(float dt);
 	Light(const CS300Parser::Light_info& _light);
 	~Light();
 	//  other variables 

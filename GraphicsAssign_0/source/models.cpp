@@ -16,61 +16,6 @@
 
 int Model::slices = 4;
 
-void Model::CreateColorTextureData()
-{
-	const int width = 6;
-	const int height = 6;
-	const int patternSize = 6;
-
-	glm::vec3 colors[] = 
-	{
-		glm::vec3(0, 0, 1),   // Blue
-		glm::vec3(0, 1, 1),   // Cyan
-		glm::vec3(0, 1, 0),   // Green
-		glm::vec3(1, 1, 0),   // Yellow
-		glm::vec3(1, 0, 0),   // Red
-		glm::vec3(1, 0, 1)    // Purple
-	};
-
-	unsigned char* data = new unsigned char[width * height * 3 * 36];
-	for (int y = 0; y < height; y++) 
-	{
-		for (int x = 0; x < width; x++) 
-		{
-			int colorIdx = (x + (height - 1 - y)) % patternSize;
-			for (int py = 0; py < patternSize; py++)
-			{  // 세로 반복
-				for (int px = 0; px < patternSize; px++)
-				{  // 가로 반복
-					int idx = ((y * patternSize + py) * width * patternSize + (x * patternSize + px)) * 3;
-					data[idx] = colors[colorIdx].r * 255;
-					data[idx + 1] = colors[colorIdx].g * 255;
-					data[idx + 2] = colors[colorIdx].b * 255;
-				}
-			}
-		}
-	}
-
-	//Texture 생성
-	glGenTextures(1, &colorID);
-	//어느 Texture에 할건지 active
-	glActiveTexture(GL_TEXTURE0);
-	//TextureID에 바인딩
-	glBindTexture(GL_TEXTURE_2D, colorID);
-	//TextureData 삽입
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width * 6, height * 6, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
-
-	//Data 삽입 glTexParameteri
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_MIRRORED_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_MIRRORED_REPEAT);
-
-	delete[] data;
-
-	glBindTexture(GL_TEXTURE_2D, 0);
-}
-
 void Model::CreateNormalMap()
 {
 	int width, height, comp;
@@ -96,8 +41,6 @@ void Model::CreateNormalMap()
 	stbi_image_free(img);
 	glBindTexture(GL_TEXTURE_2D, 0);
 }
-
-
 
 glm::mat4x4 Model::ComputeMatrix()
 {
@@ -224,7 +167,6 @@ void Model::CreateModels()
 		vertices.push_back(bitangent[i].x);
 		vertices.push_back(bitangent[i].y);
 		vertices.push_back(bitangent[i].z);
-
 	}
 
 
@@ -262,8 +204,6 @@ void Model::CreateModels()
 	glVertexAttribPointer(4, 3, GL_FLOAT, GL_FALSE, 14 * sizeof(float), (void*)(11 * sizeof(float)));
 	glEnableVertexAttribArray(4);
 
-	//Calculate ColorTexture
-	CreateColorTextureData();
 	//Calculate NormalMapping
 	CreateNormalMap();
 
@@ -273,6 +213,7 @@ void Model::CreateModels()
 
 Model::Model(const CS300Parser::Transform& _transform) : transf(_transform), VBO(0), VAO(0)
 {
+	transf.startPos = transf.pos;
 	CreateModels();
 }
 
@@ -280,7 +221,7 @@ Model::~Model()
 {
 	glDeleteBuffers(1, &VBO);
 	glDeleteBuffers(1, &norVBO);
-	glDeleteTextures(1, &colorID);
+	//glDeleteTextures(1, &colorID);
 	glDeleteTextures(1, &imageID);
 
 	glDeleteVertexArrays(1, &VAO);
@@ -589,6 +530,14 @@ void Model::CalculateTangents()
 	
 }
 
+void Model::ModelUpdate(float dt)
+{
+	t += dt;
+	transf.pos = transf.startPos;
+	for (int i = 0; i < transf.anims.size(); i++)
+		transf.pos = transf.anims[i].Update(transf.pos, t);
+}
+
 void Model::ClearAll()
 {
 	points.clear();
@@ -603,6 +552,17 @@ void Model::ClearAll()
 	vertices.clear();
 }
 
+void Light::LightUpdate(float dt)
+{
+	t += dt;
+	m->transf.pos = m->transf.startPos;
+	for (int i = 0; i < m->transf.anims.size(); i++)
+	{
+		m->transf.pos = m->transf.anims[i].Update(m->transf.pos, t);
+		position = m->transf.anims[i].Update(m->transf.pos, t);
+	}
+}
+
 Light::Light(const CS300Parser::Light_info& _light)
 {
 	CS300Parser::Transform T;
@@ -614,6 +574,11 @@ Light::Light(const CS300Parser::Light_info& _light)
 	T.pos = _light.pos;
 	T.rot = glm::vec3(1.0f, 1.0f, 1.0f);
 	T.sca = glm::vec3(1.0f, 1.0f, 1.0f);
+	T.startPos = T.pos;
+	for (int i = 0; i < _light.anims.size(); i++)
+	{
+		T.anims.push_back(_light.anims[i]);
+	}
 	//ns        = default
 	//ior       = default
 	//reflector = default
@@ -632,6 +597,9 @@ Light::Light(const CS300Parser::Light_info& _light)
 	inner = _light.inner;
 	outer = _light.outer;
 	falloff = _light.falloff;
+
+	bias = _light.bias;
+	pcf = _light.pcf;
 }
 
 Light::~Light()

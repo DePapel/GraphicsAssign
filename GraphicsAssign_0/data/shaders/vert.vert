@@ -21,6 +21,7 @@ out mat3 cameraM;
 
 void main()
 {
+
    gl_Position = camera * model * vPosition;
    
    Position = (model * vPosition).xyz;

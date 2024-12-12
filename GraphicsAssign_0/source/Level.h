@@ -28,7 +28,14 @@ struct Level
 	void RotateCamY(float angle);
 
 	bool keyStateW = false, keyStateS = false, keyStateA = false, keyStateD = false;
-	bool comavgSw, shaderSW, norOnOffSW = false, wireSW = false;
+	bool comavgSw, norOnOffSW = false, wireSW = false;
+	int shaderSW = 0;
+
+	unsigned int colorID;
+	void CreateColorTexture();
+	unsigned int depthTex, shadowFBO;
+	unsigned int renderTexture0, renderTexture1, renderTexture2;
+	void CreateDepthTexture();
 
 private:
 	void Render(Model*);

@@ -11,6 +11,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 
 #include <iostream>
+#include <chrono>
 
 Level* Level::ptr = nullptr;
 
@@ -45,7 +46,7 @@ int Level::Initialize()
 
 	//Load Scene
 	CS300Parser parser;
-	parser.LoadDataFromFile("data/scenes/scene_A2.txt");
+	parser.LoadDataFromFile("data/scenes/scene_A3.txt");
 
 	//Convert from parser->obj to Model
 	for (auto o : parser.objects)
@@ -80,6 +81,9 @@ int Level::Initialize()
 
 	glEnable(GL_DEPTH_TEST);
 
+	CreateColorTexture();
+	CreateDepthTexture();
+
 	return 0;
 }
 
@@ -87,11 +91,23 @@ int Level::Initialize()
 void Level::Run()
 {
 	glClearColor(0, 0, 0, 0);
+	float TLastFrame = 0;
+
 	// Main loop
 	while (!glfwWindowShouldClose(window)) 
 	{
+		float TCurrentFrame = 0;
+		std::chrono::time_point<std::chrono::steady_clock> time = std::chrono::steady_clock::now();
 		// Render graphics here
-		 glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+		//Update objects pos
+		for (auto obj : allObjects)
+			obj->ModelUpdate(TLastFrame);
+		
+
+		for (auto light : allLights)
+			light->LightUpdate(TLastFrame);
 
 		//use shader program
 		glUseProgram(shader->handle);
@@ -125,24 +141,38 @@ void Level::Run()
 		//cam.ViewMat = glm::lookAt(cam.camPos, cam.camTarget, up);
 		cam.ViewMat = V;
 
+		//light.ViewMat = glm::lookAt(cam.camPos, cam.camTarget, up);
+
 		//The image is mirrored on X
 		cam.ProjMat = glm::perspective(glm::radians(cam.fovy), cam.width / cam.height, cam.nearPlane, cam.farPlane);
 
+		//glbindFramebuffer(ajsfj);
+
+		//glViewport(200, 200, 200, 200);
+
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 		//For each object in the level
 		for (auto o : allObjects)
 		{
-			//Render the object
 			Render(o);
 		}
 		for (auto l : allLights)
 		{
 			Render(l->m);
 		}
+	
+		//뷰포트 변경
+		//SubRender();
 
 		glUseProgram(0);
 
 		glfwSwapBuffers(window);
 		glfwPollEvents();
+
+		std::chrono::time_point<std::chrono::steady_clock> endtime = std::chrono::steady_clock::now();
+
+		TCurrentFrame = std::chrono::duration<float>(endtime - time).count();
+		TLastFrame = TCurrentFrame;
 	}
 
 	return;
@@ -229,9 +259,81 @@ void Level::RotateCamY(float angle)
 	cam.camPos = cam.camTarget - glm::vec3(glm::rotate(glm::identity<glm::mat4>(), glm::radians(-angle), cam.camUp) * glm::vec4(cam.camTarget - cam.camPos,1));
 }
 
+void Level::CreateColorTexture()
+{
+	const int width = 6;
+	const int height = 6;
+	const int patternSize = 6;
+
+	glm::vec3 colors[] =
+	{
+		glm::vec3(0, 0, 1),   // Blue
+		glm::vec3(0, 1, 1),   // Cyan
+		glm::vec3(0, 1, 0),   // Green
+		glm::vec3(1, 1, 0),   // Yellow
+		glm::vec3(1, 0, 0),   // Red
+		glm::vec3(1, 0, 1)    // Purple
+	};
+
+	unsigned char* data = new unsigned char[width * height * 3 * 36];
+	for (int y = 0; y < height; y++)
+	{
+		for (int x = 0; x < width; x++)
+		{
+			int colorIdx = (x + (height - 1 - y)) % patternSize;
+			for (int py = 0; py < patternSize; py++)
+			{  // 세로 반복
+				for (int px = 0; px < patternSize; px++)
+				{  // 가로 반복
+					int idx = ((y * patternSize + py) * width * patternSize + (x * patternSize + px)) * 3;
+					data[idx] = colors[colorIdx].r * 255;
+					data[idx + 1] = colors[colorIdx].g * 255;
+					data[idx + 2] = colors[colorIdx].b * 255;
+				}
+			}
+		}
+	}
+
+	//Texture 생성
+	glGenTextures(1, &colorID);
+	//어느 Texture에 할건지 active
+	glActiveTexture(GL_TEXTURE0);
+	//TextureID에 바인딩
+	glBindTexture(GL_TEXTURE_2D, colorID);
+	//TextureData 삽입
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width * 6, height * 6, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+
+	//Data 삽입 glTexParameteri
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_MIRRORED_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_MIRRORED_REPEAT);
+
+	delete[] data;
+
+	glBindTexture(GL_TEXTURE_2D, 0);
+}
+
+void Level::CreateDepthTexture()
+{
+	glGenTextures(1, &depthTex);
+	glBindTexture(GL_TEXTURE_2D, depthTex);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, W_WIDTH, W_HEIGHT, 0, GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+
+	glGenFramebuffers(1, &shadowFBO);
+	glBindFramebuffer(GL_FRAMEBUFFER, shadowFBO);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depthTex, 0);
+
+
+	//hdjka
+}
+
 void Level::Render(Model* obj)
 {
-
 	if (obj->transf.name != "Light")
 	{
 		shader->setUniform("lineSW", false);
@@ -261,13 +363,15 @@ void Level::Render(Model* obj)
 	//==============================================
 
 	//Color Texture Binding
-	glBindTextureUnit(0, obj->colorID);
+	glBindTextureUnit(0, colorID);
 	shader->setUniform("myTextureSampler", 0);
 
 	//Image Texture Binding
 	glBindTextureUnit(1, obj->imageID);
 	shader->setUniform("normalTexture", 1); //maybe 1.
 
+	if (shaderSW > 3)
+		shaderSW = 0;
 	shader->setUniform("shaderSW", shaderSW);
 
 	if (wireSW)

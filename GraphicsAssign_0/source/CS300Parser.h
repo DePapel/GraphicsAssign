@@ -37,6 +37,7 @@ class CS300Parser
         bool      reflector = false;
 
         std::vector<Animations::Anim> anims;
+        glm::vec3 startPos;
     };
 
     std::vector<Transform> objects;

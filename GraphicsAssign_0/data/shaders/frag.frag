@@ -15,7 +15,7 @@ in mat3 cameraM;
 uniform sampler2D myTextureSampler;
 uniform sampler2D normalTexture;
 
-uniform bool shaderSW;
+uniform int shaderSW;
 uniform bool lineSW;
 uniform bool lightSW;
 
@@ -72,19 +72,29 @@ void main()
 		//Calculate Light Direction
 		vec3 lightDir;
 		if(uLight[i].type == 0 || uLight[i].type == 2) //POINT and SPOT
-			lightDir = normalize(lPos - Position); // (L)
+			lightDir = -normalize(lPos - Position); // (L)
 		else if(uLight[i].type == 1) //DIR
 			lightDir = -uLight[i].dir; // (L)
 			
 		//***Ambient***
 		vec3 col = vec4(UV, 0.0, 1.0).xyz;
-		if(!shaderSW)
+		if(shaderSW == 1)
 		{
 			col = texture(myTextureSampler, UV).xyz;
 			NorTemp = normalize(2.0 * texture(normalTexture, UV).xyz - 1.0);
 			
 			//Convert nomal from tangent space (NMap) to World
 			NorTemp = normalize(FragmodelM * TBN * NorTemp); 
+		}
+		else if(shaderSW == 2)
+		{
+			FragColor = vec4((tan + vec3(1,1,1)) / 2.0, 1.0);
+			return;
+		}
+		else if(shaderSW == 3)
+		{
+			FragColor = vec4((bitan + vec3(1,1,1)) / 2.0 , 1.0);
+			return;
 		}
 		vec3 ambient = light_ambient * Mambient * col;
 		Mdiffuse = col;
@@ -116,22 +126,18 @@ void main()
 		}
 		else
 		{
-			//ambient = vec3(0,0,0);
-			//diffuse = vec3(0,0,0);
-			//specular = vec3(0,0,0);
 			resultColor += ambient + att*(diffuse + specular);
 		}
 	}
 	
+	
 	FragColor = vec4(resultColor, 1.0);
+	
+	float d = distance(Position, uLight[0].positionWorld) / 400;
+	
+	//FragColor = vec4(d,d,d,1);
 	
 	if(lineSW || lightSW)
 		FragColor = vec4(1.0, 1.0, 1.0, 1.0);
 		
-	//FragColor = vec4((NorTemp + vec3(1,1,1) / 2.0) , 1.0);
-	//FragColor = vec4((tan + vec3(1,1,1) / 2.0) , 1.0);
-	
-	//FragColor = texture(myTextureSampler,UV);
-	//FragColor = texture(normalTexture,UV);
-	
 }

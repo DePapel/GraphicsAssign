@@ -73,7 +73,7 @@ void Controls::keyCallback(GLFWwindow* pWindow, int key, int scancode, int actio
 
         //TODO: TRIGGER TEXTURE
         if (key == GLFW_KEY_T)
-            Level::GetPtr()->shaderSW = !Level::GetPtr()->shaderSW;
+            Level::GetPtr()->shaderSW++;
 
         //TODO: TRIGGER NORMALS RENDER
         if (key == GLFW_KEY_N)
