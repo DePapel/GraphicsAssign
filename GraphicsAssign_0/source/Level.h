@@ -34,11 +34,12 @@ struct Level
 	unsigned int colorID;
 	void CreateColorTexture();
 	unsigned int depthTex, shadowFBO;
-	unsigned int renderTexture0, renderTexture1, renderTexture2;
 	void CreateDepthTexture();
 
 private:
 	void Render(Model*);
+	void SubRender(Model*);
+	void PlaneRender(Model*);
 	Level();
 	~Level();
 	Level(const Level&) = delete;
@@ -73,8 +74,27 @@ private:
 
 	Camera cam;
 
+	struct LightAspect
+	{
+		//Vl = Lv * W * Vv
+		glm::mat4 world_to_light;//Lv
+		//Vv: 따로 vert에서 계산가능
+
+		//TC = Ls * Lp * Vl
+		glm::mat4 projMat;//Lp
+		glm::mat4 coordMapping = glm::mat4 //Ls
+		(
+			1.0f / 2.0f, 0, 0, 1.0f / 2.0f,
+			0, 1.0f / 2.0f, 0, 1.0f / 2.0f,
+			0, 0, 1.0f / 2.0f, 1.0f / 2.0f,
+			0, 0, 0, 1.0f
+		);
+	};
+
+	LightAspect la;
 	//shaders
 	cg::Program* shader;
+	cg::Program* shadowShader;
 
 public:
 	const std::vector<Model*>& getAllObject() { return allObjects; }

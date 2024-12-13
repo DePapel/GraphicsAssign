@@ -12,12 +12,17 @@ in vec3 tan;
 in vec3 bitan;
 in mat3 cameraM;
 
+in vec3 Vl;
+in vec2 TC;
+
 uniform sampler2D myTextureSampler;
 uniform sampler2D normalTexture;
+uniform sampler2D ShadowMap;
 
 uniform int shaderSW;
 uniform bool lineSW;
 uniform bool lightSW;
+uniform bool only;
 
 struct Light
 {
@@ -46,6 +51,12 @@ uniform vec3 CameraPosition;
 
 void main()
 {   
+	if(only)
+	{
+		FragColor = texture(ShadowMap, UV);
+		return;
+	}
+	
 	//Material Property
 	float Mambient; 	//(Ka)
 	Mambient = 1.0;
@@ -112,6 +123,13 @@ void main()
 		float dis = distance(Position, lPos);
 		float att = min(1.0/(uLight[i].atten.x + uLight[i].atten.y*dis + uLight[i].atten.z*dis*dis), 1);
 	
+		//shadow mapping===================================
+		
+		
+		
+		
+		//=================================================
+	
 		if(uLight[i].type == 2) //SPOT
 		{
 			vec3 dirSpot = normalize(uLight[i].dir);
@@ -139,5 +157,9 @@ void main()
 	
 	if(lineSW || lightSW)
 		FragColor = vec4(1.0, 1.0, 1.0, 1.0);
+		
+	
+		
+		
 		
 }

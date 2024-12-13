@@ -49,10 +49,13 @@ int Level::Initialize()
 	parser.LoadDataFromFile("data/scenes/scene_A3.txt");
 
 	//Convert from parser->obj to Model
+
+	
 	for (auto o : parser.objects)
 	{
 		allObjects.push_back(new Model(o));
 	}
+
 
 	for (auto o : parser.lights)
 	{
@@ -86,7 +89,6 @@ int Level::Initialize()
 
 	return 0;
 }
-
 
 void Level::Run()
 {
@@ -138,17 +140,24 @@ void Level::Run()
 		V[3][2] = -dot(dir, cam.camPos);
 
 
+
 		//cam.ViewMat = glm::lookAt(cam.camPos, cam.camTarget, up);
 		cam.ViewMat = V;
-
-		//light.ViewMat = glm::lookAt(cam.camPos, cam.camTarget, up);
-
 		//The image is mirrored on X
 		cam.ProjMat = glm::perspective(glm::radians(cam.fovy), cam.width / cam.height, cam.nearPlane, cam.farPlane);
+		
+		la.world_to_light = glm::lookAt(allLights[0]->position, allLights[0]->position + allLights[0]->direct, glm::vec3(0, 1, 0));
+		la.projMat = glm::perspective(glm::radians(90.0f), float(W_WIDTH / 4) / float(W_HEIGHT / 2), 25.f, 500.0f);
 
-		//glbindFramebuffer(ajsfj);
+		
+		glBindFramebuffer(GL_FRAMEBUFFER, shadowFBO);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		glViewport(0, 0, W_WIDTH, W_HEIGHT);
+		for (auto o : allObjects)
+		{
+			SubRender(o);
+		}
 
-		//glViewport(200, 200, 200, 200);
 
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 		//For each object in the level
@@ -160,9 +169,11 @@ void Level::Run()
 		{
 			Render(l->m);
 		}
-	
-		//ºäÆ÷Æ® º¯°æ
-		//SubRender();
+
+		//Add Render
+		glViewport(-150, -150, 600, 600);
+		PlaneRender(allObjects[0]);
+
 
 		glUseProgram(0);
 
@@ -228,6 +239,26 @@ void Level::ReloadShaderProgram()
 	file.close();
 
 	shader = new cg::Program(v.str().c_str(), f.str().c_str());
+
+	glUseProgram(0);
+
+	if (shadowShader)
+		delete shadowShader;
+
+	std::stringstream shadow_v;
+	std::stringstream shadow_f;
+
+	file.open("data/shaders/shadowVert.vert");
+
+	if (file.is_open())
+		shadow_v << file.rdbuf();
+	file.close();
+
+	file.open("data/shaders/shadowFrag.frag");
+	shadow_f << file.rdbuf();
+	file.close();
+
+	shadowShader = new cg::Program(shadow_v.str().c_str(), shadow_f.str().c_str());
 }
 
 void Level::KeyInput()
@@ -321,19 +352,21 @@ void Level::CreateDepthTexture()
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, W_WIDTH, W_HEIGHT, 0, GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 
 	glGenFramebuffers(1, &shadowFBO);
 	glBindFramebuffer(GL_FRAMEBUFFER, shadowFBO);
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depthTex, 0);
 
-
-	//hdjka
+	glBindTexture(GL_TEXTURE_2D, 0);
 }
 
 void Level::Render(Model* obj)
 {
+	glUseProgram(shader->handle);
+
+	glFrontFace(GL_CCW);
 	if (obj->transf.name != "Light")
 	{
 		shader->setUniform("lineSW", false);
@@ -350,17 +383,18 @@ void Level::Render(Model* obj)
 	//Send model matrix to the shader
 
 	glm::mat4x4 m2w = obj->ComputeMatrix();
-	//Send view matrix to the shader
-
 	glm::mat4x4 CameraMatrix = cam.ProjMat * cam.ViewMat;
 
 	shader->setUniform("model", m2w);
 	shader->setUniform("camera", CameraMatrix);
 	
-	//TBN===========================================
-	//shader->setUniform("tangent", obj->tangent);
-	//shader->setUniform("bitangent", obj->bitangent);
-	//==============================================
+	//Lv: world_to_light
+	shader->setUniform("Lv", glm::inverse(la.world_to_light));
+	//Lp: light projection
+	shader->setUniform("Lp", la.projMat);
+	//Ls: Coordinate Mapping
+	shader->setUniform("Ls", la.coordMapping);
+
 
 	//Color Texture Binding
 	glBindTextureUnit(0, colorID);
@@ -368,7 +402,10 @@ void Level::Render(Model* obj)
 
 	//Image Texture Binding
 	glBindTextureUnit(1, obj->imageID);
-	shader->setUniform("normalTexture", 1); //maybe 1.
+	shader->setUniform("normalTexture", 1);
+
+	glBindTextureUnit(2, depthTex);
+	shader->setUniform("ShadowMap", 2);
 
 	if (shaderSW > 3)
 		shaderSW = 0;
@@ -378,18 +415,6 @@ void Level::Render(Model* obj)
 		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 	else
 		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-	glDrawArrays(GL_TRIANGLES, 0, obj->points.size());
-
-
-	//Line
-	shader->setUniform("lineSW", true);
-	shader->setUniform("lightSW", false);
-	glBindBuffer(GL_ARRAY_BUFFER, obj->norVBO);
-	glBindVertexArray(obj->norVAO);
-
-	if (norOnOffSW)
-		glDrawArrays(GL_LINES, 0, obj->drawNormal.size());
-
 
 	shader->setUniform("uLightNum", int(allLights.size()));
 	for (size_t i = 0; i < allLights.size(); i++)
@@ -422,14 +447,69 @@ void Level::Render(Model* obj)
 	//Cameara Position
 	shader->setUniform("CameraPosition", cam.camPos);
 
+	shader->setUniform("only", false);
+
+	glDrawArrays(GL_TRIANGLES, 0, obj->points.size());
+
+
+	//Line
+	shader->setUniform("lineSW", true);
+	shader->setUniform("lightSW", false);
+	glBindBuffer(GL_ARRAY_BUFFER, obj->norVBO);
+	glBindVertexArray(obj->norVAO);
+
+	if (norOnOffSW)
+		glDrawArrays(GL_LINES, 0, obj->drawNormal.size());
+
+
+	
+
+	//unsigned char* temp;
+	//temp = new unsigned char[W_WIDTH * W_HEIGHT * 4];
+	//glGetTexImage(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, GL_UNSIGNED_BYTE, temp);
+}
+
+void Level::SubRender(Model* obj)
+{
+	glUseProgram(shadowShader->handle);
+
+	glm::mat4x4 ViewMatrix = la.projMat * la.world_to_light;
+
+	glm::mat4x4 m2w = obj->ComputeMatrix();
+
+	shadowShader->setUniform("model", m2w);
+	shadowShader->setUniform("camera", ViewMatrix);
+
+	//set glm::framebuffer, texture, drawmode
+	glBindBuffer(GL_ARRAY_BUFFER, obj->VBO);
+	glBindVertexArray(obj->VAO);
+
+	glFrontFace(GL_CW);
+	glDrawArrays(GL_TRIANGLES, 0, obj->points.size());
+
+
+}
+
+void Level::PlaneRender(Model* obj)
+{
+	glUseProgram(shader->handle);
+
+	shader->setUniform("only", true);
+
+	glBindTextureUnit(2, depthTex);
+	shader->setUniform("ShadowMap", 2);
+
+	glBindBuffer(GL_ARRAY_BUFFER, obj->VBO);
+	glBindVertexArray(obj->VAO);
+
+	glDrawArrays(GL_TRIANGLES, 0, obj->points.size());
 }
 
 
-Level::Level(): window (nullptr), shader(nullptr)
+Level::Level(): window (nullptr), shader(nullptr), shadowShader(nullptr)
 {
 
 }
-
 Level::~Level()
 {
 	for (auto m : allObjects)
@@ -440,7 +520,6 @@ Level::~Level()
 	allObjects.clear();
 	allLights.clear();
 }
-
 int Level::GetType(std::string _type)
 {
 	if (_type == "POINT")
