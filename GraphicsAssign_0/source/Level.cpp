@@ -171,7 +171,7 @@ void Level::Run()
 		}
 
 		//Add Render
-		glViewport(-150, -150, 600, 600);
+		glViewport(0, 0, 300, 300);
 		PlaneRender(allObjects[0]);
 
 
@@ -383,7 +383,8 @@ void Level::Render(Model* obj)
 	//Send model matrix to the shader
 
 	glm::mat4x4 m2w = obj->ComputeMatrix();
-	glm::mat4x4 CameraMatrix = cam.ProjMat * cam.ViewMat;
+	//glm::mat4x4 CameraMatrix = cam.ProjMat * cam.ViewMat;
+	glm::mat4x4 CameraMatrix = la.projMat * la.world_to_light;
 
 	shader->setUniform("model", m2w);
 	shader->setUniform("camera", CameraMatrix);
@@ -436,6 +437,7 @@ void Level::Render(Model* obj)
 		shader->setUniform("uLight[" + std::to_string(i) + "].outer", allLights[i]->outer);
 		shader->setUniform("uLight[" + std::to_string(i) + "].falloff", allLights[i]->falloff);
 
+		shader->setUniform("uLight[" + std::to_string(i) + "].bias", allLights[i]->bias);
 
 		//  other variables 
 		//  ...

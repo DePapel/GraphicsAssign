@@ -12,8 +12,11 @@ in vec3 tan;
 in vec3 bitan;
 in mat3 cameraM;
 
-in vec3 Vl;
-in vec2 TC;
+in vec4 Vl;
+//in vec2 TC;
+uniform mat4 Lp;
+uniform mat4 Ls;
+
 
 uniform sampler2D myTextureSampler;
 uniform sampler2D normalTexture;
@@ -38,6 +41,8 @@ struct Light
 	float inner;
 	float outer;
 	float falloff;
+	
+	float bias;
 };
 
 uniform int uLightNum;
@@ -82,10 +87,10 @@ void main()
 		
 		//Calculate Light Direction
 		vec3 lightDir;
-		if(uLight[i].type == 0 || uLight[i].type == 2) //POINT and SPOT
-			lightDir = -normalize(lPos - Position); // (L)
-		else if(uLight[i].type == 1) //DIR
-			lightDir = -uLight[i].dir; // (L)
+		if(uLight[i].type == 0) //POINT
+			lightDir = normalize(lPos - Position); // (L)
+		else if(uLight[i].type == 1  || uLight[i].type == 2) //DIR
+			lightDir = uLight[i].dir; // (L)
 			
 		//***Ambient***
 		vec3 col = vec4(UV, 0.0, 1.0).xyz;
@@ -124,42 +129,48 @@ void main()
 		float att = min(1.0/(uLight[i].atten.x + uLight[i].atten.y*dis + uLight[i].atten.z*dis*dis), 1);
 	
 		//shadow mapping===================================
+		//Vl을 NDC좌표로 바꾸고 난 후 D(=TC를 이용하여 ShadowMap에서 추출한 값)와 비교
 		
+		//Vl
+		vec4 newV = Lp * Vl; //World-to-Light's View
+		newV = vec4(newV.x/newV.w, newV.y/newV.w, newV.z/newV.w, 1); //Light's View-to-NDC
+		newV = Ls * newV; //NDC Mapping
 		
+		//TC
+		vec2 TC = newV.xy;
 		
+		//D is color in ShadowMap
+		float D = texture(ShadowMap, TC).x;
+		float shadow = 1.0;
+		if(newV.z - uLight[0].bias > D) 
+		{
+			shadow = 0.0;
+		}
 		
 		//=================================================
 	
 		if(uLight[i].type == 2) //SPOT
 		{
-			vec3 dirSpot = normalize(uLight[i].dir);
-			float LdotD = dot(lightDir, dirSpot);
-			float effectAngle = LdotD / (length(lightDir) * length(dirSpot));
+			vec3 dirSpot = normalize(lightDir);
+			vec3 lightTOTarget = normalize(Position - lPos);
+			float LdotD = dot(lightTOTarget, dirSpot);
+			float effectAngle = LdotD / (length(lightTOTarget) * length(dirSpot));
 			
-			float SpotLightEffect = pow(effectAngle - cos(uLight[i].outer) / cos(uLight[i].inner) - cos(uLight[i].outer), uLight[i].falloff);
-		
+			float Phi = cos(radians(uLight[i].outer));
+            float Theta = cos(radians(uLight[i].inner));
+			float SpotLightEffect = pow((effectAngle - Phi) / (Theta - Phi), uLight[i].falloff);
 			SpotLightEffect = clamp(SpotLightEffect, 0.0, 1.0);
 			
-			resultColor += ambient + SpotLightEffect*(diffuse + specular);
+			resultColor += ambient + SpotLightEffect * shadow *(diffuse + specular);
 		}
 		else
 		{
-			resultColor += ambient + att*(diffuse + specular);
+			resultColor += ambient + att * shadow *(diffuse + specular);
 		}
 	}
 	
-	
 	FragColor = vec4(resultColor, 1.0);
 	
-	float d = distance(Position, uLight[0].positionWorld) / 400;
-	
-	//FragColor = vec4(d,d,d,1);
-	
 	if(lineSW || lightSW)
-		FragColor = vec4(1.0, 1.0, 1.0, 1.0);
-		
-	
-		
-		
-		
+		FragColor = vec4(1.0, 1.0, 1.0, 1.0);	
 }

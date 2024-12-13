@@ -50,13 +50,7 @@ shininess 20
 mesh PLANE
 normalMap data/textures/brick_normal_map.png
 
-object ceil
-translate 0 50 50
-rotation 90 0 0
-scale 100 100 100
-shininess 20
-mesh PLANE
-normalMap data/textures/brick_normal_map.png
+
 
 object sphere1
 translate 0 0 50

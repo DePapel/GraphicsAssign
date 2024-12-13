@@ -25,18 +25,20 @@ out vec3 tan;
 out vec3 bitan;
 out mat3 cameraM;
 
-out vec3 Vl;
-out vec2 TC;
+out vec4 Vl;
+out vec4 NDC;
+
 
 void main()
 {
 	UV = vTextCoords;
 	if(only)
 	{
-		gl_Position = vPosition * 2;
+		gl_Position = vec4(vPosition.xyz * 2, 1);
 		return;
 	}
    gl_Position = camera * model * vPosition;
+   NDC = gl_Position;
    
    Position = (model * vPosition).xyz;
   
@@ -51,6 +53,5 @@ void main()
    
    cameraM = mat3(camera);
    
-   Vl = (Lv * (model * vPosition)).xyz;
-   TC = (Ls * Lp * vec4(Vl, 1)).xy;
+   Vl = (Lv * (model * vPosition));
 }
