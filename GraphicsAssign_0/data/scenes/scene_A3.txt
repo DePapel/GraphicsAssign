@@ -50,7 +50,13 @@ shininess 20
 mesh PLANE
 normalMap data/textures/brick_normal_map.png
 
-
+object ceil
+translate 0 50 50
+rotation 90 0 0
+scale 100 100 100
+shininess 20
+mesh PLANE
+normalMap data/textures/brick_normal_map.png
 
 object sphere1
 translate 0 0 50
@@ -96,7 +102,7 @@ lightType SPOT
 attenuation 0 0.0 0.0	
 direction 0.577 -0.577 0.577
 spotAttenuation 10 40 1
-sinusoidal 0 0.5 30
+sinusoidal 0 0.5 20
 ambient 0.1
 bias 0.00001
 pcf 3

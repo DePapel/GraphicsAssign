@@ -8,6 +8,7 @@ Platform: Windows
 Author: Jon Sanchez
 End Header --------------------------------------------------------*/
 #include "animations.h"
+#include <iostream>
 
 #include <glm/gtc/matrix_transform.hpp>
 
@@ -21,7 +22,9 @@ glm::vec3 Anim::Update(const glm::vec3 & pos, float time) const
 
 glm::vec3 Sinusoidal(const glm::vec3 & pos, const glm::vec3 & param, float time)
 {
-    return pos + glm::sin(param.x + time * param.y) * glm::vec3(0.0f, param.z, 0.0f);
+    glm::vec3 v = pos + glm::sin(param.x + time * param.y) * glm::vec3(0.0f, param.z, 0.0f);;
+    std::cout << v.y << std::endl;
+    return v;
 }
 
 glm::vec3 Orbit(const glm::vec3 & pos, const glm::vec3 & center, float time)

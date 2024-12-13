@@ -16,7 +16,7 @@ in vec4 Vl;
 //in vec2 TC;
 uniform mat4 Lp;
 uniform mat4 Ls;
-
+in vec4 NDC;
 
 uniform sampler2D myTextureSampler;
 uniform sampler2D normalTexture;
@@ -134,15 +134,26 @@ void main()
 		//Vl
 		vec4 newV = Lp * Vl; //World-to-Light's View
 		newV = vec4(newV.x/newV.w, newV.y/newV.w, newV.z/newV.w, 1); //Light's View-to-NDC
-		newV = Ls * newV; //NDC Mapping
+		newV = (newV + vec4(1,1,1,1)) / 2.0; //NDC Mapping
 		
 		//TC
 		vec2 TC = newV.xy;
 		
+		
 		//D is color in ShadowMap
 		float D = texture(ShadowMap, TC).x;
+		
+		//Test========================
+		//vec4 newNDC = NDC / NDC.w;
+		//newNDC = (newNDC + vec4(1,1,1,1)) / 2.0;
+		//FragColor = vec4(newNDC.xy,0, 1);
+		//FragColor = texture(ShadowMap, TC);
+		//return;
+		//==============================
+		
+		
 		float shadow = 1.0;
-		if(newV.z - uLight[0].bias > D) 
+		if(newV.z - uLight[i].bias > D) 
 		{
 			shadow = 0.0;
 		}

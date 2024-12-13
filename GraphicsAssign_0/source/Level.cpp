@@ -147,7 +147,7 @@ void Level::Run()
 		cam.ProjMat = glm::perspective(glm::radians(cam.fovy), cam.width / cam.height, cam.nearPlane, cam.farPlane);
 		
 		la.world_to_light = glm::lookAt(allLights[0]->position, allLights[0]->position + allLights[0]->direct, glm::vec3(0, 1, 0));
-		la.projMat = glm::perspective(glm::radians(90.0f), float(W_WIDTH / 4) / float(W_HEIGHT / 2), 25.f, 500.0f);
+		la.projMat = glm::perspective(glm::radians(cam.fovy), cam.width / cam.height, cam.nearPlane, cam.farPlane);
 
 		
 		glBindFramebuffer(GL_FRAMEBUFFER, shadowFBO);
@@ -352,8 +352,8 @@ void Level::CreateDepthTexture()
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, W_WIDTH, W_HEIGHT, 0, GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
 
 	glGenFramebuffers(1, &shadowFBO);
 	glBindFramebuffer(GL_FRAMEBUFFER, shadowFBO);
@@ -383,14 +383,14 @@ void Level::Render(Model* obj)
 	//Send model matrix to the shader
 
 	glm::mat4x4 m2w = obj->ComputeMatrix();
-	//glm::mat4x4 CameraMatrix = cam.ProjMat * cam.ViewMat;
-	glm::mat4x4 CameraMatrix = la.projMat * la.world_to_light;
+	glm::mat4x4 CameraMatrix = cam.ProjMat * cam.ViewMat;
+	//glm::mat4x4 CameraMatrix = la.projMat * la.world_to_light;
 
-	shader->setUniform("model", m2w);
+	shader->setUniform("model", m2w); 
 	shader->setUniform("camera", CameraMatrix);
 	
 	//Lv: world_to_light
-	shader->setUniform("Lv", glm::inverse(la.world_to_light));
+	shader->setUniform("Lv", la.world_to_light);
 	//Lp: light projection
 	shader->setUniform("Lp", la.projMat);
 	//Ls: Coordinate Mapping

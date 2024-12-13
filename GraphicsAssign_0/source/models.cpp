@@ -555,12 +555,14 @@ void Model::ClearAll()
 void Light::LightUpdate(float dt)
 {
 	t += dt;
-	m->transf.pos = m->transf.startPos;
+	glm::vec3 T = m->transf.startPos;
 	for (int i = 0; i < m->transf.anims.size(); i++)
 	{
-		m->transf.pos = m->transf.anims[i].Update(m->transf.pos, t);
-		position = m->transf.anims[i].Update(m->transf.pos, t);
+		T = m->transf.anims[i].Update(T, t);
 	}
+
+	m->transf.pos = T;
+	position = T;
 }
 
 Light::Light(const CS300Parser::Light_info& _light)
